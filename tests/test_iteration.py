@@ -1,4 +1,5 @@
 import json
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -35,6 +36,20 @@ class IterationControlTests(unittest.TestCase):
         scientific = score_summary([{"sample_id": "S001", "q0": 100}], score_kind="scientific")
         self.assertEqual(quality["mean_score_scoreable"], 100)
         self.assertEqual(scientific["tasks_scoreable"], 0)
+
+    def test_main_dispatcher_writes_selection_and_preflight(self):
+        root = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as temp:
+            pool = Path(temp) / "pool.jsonl"
+            pool.write_text("".join(json.dumps({"sample_id": f"S{i:03d}"}) + "\n" for i in range(1, 101)))
+            output = Path(temp) / "iteration"
+            result = subprocess.run([str(root / "bin/run_pipeline.sh"), "iteration", "--pool", str(pool),
+                                     "--output", str(output), "--seed", "9"],
+                                    text=True, capture_output=True, check=True)
+            payload = json.loads(result.stdout)
+            self.assertEqual(len(payload["selected_task_ids"]), 10)
+            self.assertTrue((output / "selection.json").is_file())
+            self.assertTrue((output / "preflight.json").is_file())
 
 
 if __name__ == "__main__":

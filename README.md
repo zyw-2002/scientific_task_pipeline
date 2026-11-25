@@ -46,6 +46,13 @@ The tests cover historical Stage1 field presence, Stage2 construct/verify Harbor
   --output runs/iterations/iteration-001/preflight.json
 ```
 
+The same selection and preflight are available through the main dispatcher, so a real run does not require an interactive task-count or task-choice decision:
+
+```bash
+./bin/run_pipeline.sh iteration --pool /path/to/selected100.jsonl \
+  --output runs/iterations/iteration-002 --seed 20261126
+```
+
 Preflight runs after selection and records `ready`, `downloadable`, `partial`, or `blocked`. An empty data directory never becomes a scientific fixture by default. Public downloads and package-specific installation are allowed only when declared by that task; unrelated fallback datasets, synthetic replacements, and self-reported scores are not accepted. Missing material remains unscored (`null`) with its evidence and error recorded.
 
 The preserved rubric is summarized with `benchmark_iteration score`. A batch passes only when all ten tasks have valid rubric scores and the mean is at least 90; the report also includes scoreable coverage and blocked/unscored counts. Existing baseline and candidate results must be compared on the same selected task IDs before merging a pipeline revision.
