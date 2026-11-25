@@ -12,6 +12,17 @@ Construct one executable scientific task from the supplied paper and source bund
 
 ## Hard execution rules
 
+## Q0 task-quality gate
+
+Before accepting the draft, make these six quality dimensions explicit in the
+solver-facing documents and review evidence: objective and constraints;
+bounded scope and workload; complete solvability information and authorized
+resource preparation; executable evaluation rules and controls; source-backed
+truthfulness and relevance; and reproducibility/fairness with leakage control.
+Bind every decision to actual task evidence. A missing dimension is a
+construction defect; file presence or a smoke command alone is not a quality
+pass. Do not use a familiar fallback dataset to hide missing inputs.
+
 Use the authoring scaffold as the base and edit it in place. A valid direct-file
 submission has this exact shape before framework generation:
 

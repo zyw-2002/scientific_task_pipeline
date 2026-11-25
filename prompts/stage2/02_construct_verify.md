@@ -10,6 +10,13 @@ Review the package in `paths.output_dir` independently of the Stage 01 worker. R
 
 ## Mandatory gates
 
+The review must explicitly assess the six Q0 task-quality dimensions:
+objective/constraints, scope/workload, solvability information, evaluability,
+source-backed relevance, and reproducibility/fairness/leakage. Cite current
+package evidence and frozen source evidence for each. Missing dimensions,
+unbounded scope, unverifiable metrics, or undocumented resource assumptions
+keep the package in REWORK or BLOCKED.
+
 - Solver contract exists at `common_task/environment/input/task_contract.json`. Every input and output has a fixed absolute Solver path, purpose, format, fields/schema, `required`, and data responsibility. Contract runtime has `DATA_DIR=/task/problem/data`, `OUTPUT_DIR=/workspace/output`, working directory, and an entrypoint such as `python /workspace/run.py`. `evaluation.command` is the actual evaluator argv and its success condition refers to real finite metrics.
 - Public package documentation is mounted at `/task/problem/README.md` and `/task/problem/data_description.md`. Verify those exact paths are listed in instruction.md when present in the contract. A host path under `/u01/`, `data/README.md`, or a private evaluator path is invalid as a Solver input.
 - Instruction, README, data description, contract, Compose, `test.sh`, verifier, and evaluator agree on paths and filenames. Every declared output is checked by the verifier. Every verifier-read output is declared. Public documents never reference private `/task/evaluation` or hidden labels.
