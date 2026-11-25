@@ -1,0 +1,39 @@
+# Secrets and local credentials
+.env
+.env.*
+!.env.example
+config/secrets/
+
+# Source downloads and generated material caches
+inputs/raw/*
+!inputs/raw/.gitkeep
+inputs/downloaded/*
+!inputs/downloaded/.gitkeep
+cache/
+work/
+runs/
+logs/
+packages/*
+!packages/.gitkeep
+
+# Runtime and build artifacts
+*.log
+*.lock
+*.tmp
+*.tar
+*.tar.gz
+*.zip
+*.whl
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+
+# Local Docker state
+.docker/
+*.image-id
+config/local.env
+config/*.local.yaml
+config/*.local.json
+config/*.local.yml

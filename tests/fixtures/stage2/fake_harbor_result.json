@@ -1,0 +1,7 @@
+{
+  "schema_version": "fake-harbor-result-v1",
+  "status": "completed",
+  "finished_at": "2026-01-01T00:00:00+00:00",
+  "stats": {"n_errored_trials": 0, "n_completed_trials": 1},
+  "trials": [{"id": "trial-001", "status": "completed", "artifact": "artifacts/workspace"}]
+}

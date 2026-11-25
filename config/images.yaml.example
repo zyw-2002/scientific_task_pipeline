@@ -1,0 +1,8 @@
+authoring:
+  image: naturebench-base:v3
+  dockerfile: images/authoring/Dockerfile
+  pull_policy: never
+
+task:
+  image_policy: deferred
+  image: null

@@ -1,0 +1,9 @@
+# Stage3 execution defaults. Bind a verified package and task image at runtime.
+solver:
+  image: null
+  image_policy: deferred
+  network_mode: public
+judge:
+  endpoint: ""
+  model: ""
+  api_key_env: OPENAI_API_KEY

@@ -1,0 +1,51 @@
+{
+  "schema_version": "pipeline-execution-v1",
+  "task_id": "example-task",
+  "runtime": {
+    "data_dir": "/task/problem/data",
+    "cpu": 4,
+    "memory_mb": 16384,
+    "gpus": 0,
+    "network_policy": "disabled",
+    "search_policy": "none",
+    "time_limit_sec": 0,
+    "image_policy": "deferred"
+  },
+  "submission": {
+    "path": "/workspace/output/predictions.csv",
+    "required_artifacts": [
+      {
+        "id": "predictions",
+        "description": "One finite prediction for each held-out sample.",
+        "paths": [
+          "{submission}"
+        ],
+        "format": "csv",
+        "columns": [
+          "sample_id",
+          "prediction"
+        ]
+      }
+    ]
+  },
+  "data": {
+    "mode": "bundled",
+    "sources": [
+      {
+        "name": "observations",
+        "path": "common_task/environment/input/data/observations.csv",
+        "availability": "bundled",
+        "visibility": "public"
+      }
+    ]
+  },
+  "resource_estimate": {
+    "gpu_model": "NVIDIA A100",
+    "min_gpu_memory_gb": null,
+    "expected_solver_minutes": 60,
+    "basis": "A small regression task including input inspection, implementation and validation.",
+    "assumptions": [
+      "The documented dependencies and input files are available."
+    ]
+  }
+}

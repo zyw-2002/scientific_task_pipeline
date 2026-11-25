@@ -1,0 +1,12 @@
+project_root: /absolute/path/to/scientific_task_pipeline
+inputs_root: inputs
+work_root: work
+packages_root: packages
+runs_root: runs
+stage1:
+  config: config/stage1.yaml.example
+stage2:
+  worker_config: config/stage2-worker.json.example
+  construction_only: true
+stage3:
+  config: config/stage3.yaml.example

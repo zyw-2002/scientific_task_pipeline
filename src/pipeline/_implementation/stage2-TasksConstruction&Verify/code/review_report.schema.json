@@ -1,0 +1,407 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pipeline.local/schemas/review-report-v4.json",
+  "title": "Scientific review report",
+  "description": "Structure only. Implementation hashes, coverage and scientific meaning require separate validation. blocked skeletons remain incomplete until reviewed.",
+  "$defs": {
+    "scientific_check": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "enum": [
+            "pass",
+            "fail",
+            "not_run",
+            "not_applicable",
+            "insufficient_evidence"
+          ]
+        },
+        "evidence": {
+          "type": "string",
+          "minLength": 1
+        },
+        "protocol_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "scope_fidelity review binds the current formal protocol; not proof of scientific equivalence."
+        },
+        "conclusion": {
+          "enum": [
+            "comparable",
+            "unavailable",
+            "not_comparable"
+          ]
+        },
+        "inputs_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "status"
+      ]
+    },
+    "requirement": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "requirement": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "enum": [
+            "program",
+            "trajectory_review"
+          ]
+        },
+        "status": {
+          "enum": [
+            "implemented",
+            "pending_review"
+          ]
+        },
+        "runtime_check": {
+          "type": "string",
+          "minLength": 1
+        },
+        "artifact_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "implementation": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 1
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              }
+            },
+            "required": [
+              "path",
+              "sha256"
+            ]
+          }
+        },
+        "controls": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "enum": [
+                  "correct",
+                  "invalid",
+                  "weak_valid"
+                ]
+              },
+              "case": {
+                "type": "string",
+                "minLength": 1
+              },
+              "expected": {
+                "type": "string",
+                "minLength": 1
+              },
+              "expected_status": {
+                "enum": [
+                  "valid",
+                  "invalid"
+                ]
+              }
+            },
+            "required": [
+              "kind",
+              "case",
+              "expected",
+              "expected_status"
+            ]
+          }
+        },
+        "weak_valid_applicability": {
+          "type": "object",
+          "properties": {
+            "applicable": {
+              "type": "boolean"
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "applicable",
+            "reason"
+          ]
+        },
+        "evidence_needed": {},
+        "invalid_applicability": {
+          "type": "object",
+          "properties": {
+            "applicable": {
+              "type": "boolean"
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "applicable",
+            "reason"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "requirement",
+        "source",
+        "kind",
+        "status"
+      ]
+    }
+  },
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "pipline-review-report-v4"
+    },
+    "task_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "canonical_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "enum": [
+        "complete",
+        "blocked"
+      ]
+    },
+    "changes": {
+      "type": "array",
+      "items": {}
+    },
+    "resources": {
+      "type": "array",
+      "items": {}
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "enum": [
+              "pass",
+              "fail",
+              "not_run"
+            ]
+          },
+          "evidence": {
+            "type": "string",
+            "minLength": 1
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "artifacts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                }
+              },
+              "required": [
+                "path",
+                "sha256"
+              ]
+            },
+            "description": "Assessment v1: pass requires nonempty evidence files under common_task/evaluation/checks/evidence."
+          },
+          "completion_condition": {
+            "type": "string",
+            "minLength": 1,
+            "description": "For not_run: the responsible execution stage, prerequisites and observable completion condition."
+          },
+          "phase": {
+            "enum": [
+              "construction",
+              "execution"
+            ],
+            "description": "Defaults to construction. Pending execution checks do not block construction acceptance."
+          }
+        },
+        "required": [
+          "name",
+          "status"
+        ]
+      }
+    },
+    "unresolved_blockers": {
+      "type": "array",
+      "items": {}
+    },
+    "scientific_checks": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/scientific_check"
+      }
+    },
+    "scientific_requirements": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/requirement"
+      }
+    },
+    "definition_complete": {
+      "type": "boolean"
+    },
+    "sources_verified": {
+      "type": "boolean"
+    },
+    "real_data_verified": {
+      "type": "boolean"
+    },
+    "runtime_verified": {
+      "type": "boolean"
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "issue",
+          "evidence",
+          "acceptance_condition",
+          "status",
+          "category"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "issue": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidence": {
+            "type": "string",
+            "minLength": 1
+          },
+          "acceptance_condition": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "enum": [
+              "open",
+              "fixed",
+              "refuted",
+              "execution_pending"
+            ]
+          },
+          "category": {
+            "enum": [
+              "definition",
+              "implementation",
+              "data",
+              "execution",
+              "interface"
+            ]
+          },
+          "resolution": {
+            "type": "string"
+          },
+          "completion_condition": {
+            "type": "string"
+          },
+          "retest_checks": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                }
+              },
+              "required": [
+                "path",
+                "sha256"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "construction_pending": {
+      "type": "array",
+      "items": {}
+    },
+    "execution_pending": {
+      "type": "array",
+      "items": {}
+    },
+    "construction_audit": {
+      "type": "object",
+      "description": "Scope v2: checked by construction_audit.py against current files, declared resources and actual smoke controls."
+    }
+  },
+  "required": [
+    "schema_version",
+    "task_id",
+    "status",
+    "changes",
+    "resources",
+    "checks",
+    "unresolved_blockers",
+    "scientific_checks",
+    "scientific_requirements",
+    "definition_complete",
+    "sources_verified",
+    "real_data_verified",
+    "runtime_verified"
+  ]
+}

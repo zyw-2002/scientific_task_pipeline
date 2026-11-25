@@ -1,0 +1,48 @@
+{
+  "schema_version": "pipeline-execution-v1",
+  "task_id": "fixture-task-001",
+  "runtime": {
+    "data_dir": "/task/problem/data",
+    "cpu": 1,
+    "memory_mb": 512,
+    "gpus": 0,
+    "network_policy": "disabled",
+    "search_policy": "none",
+    "time_limit_sec": 0,
+    "image_policy": "deferred"
+  },
+  "submission": {
+    "path": "/workspace/output/predictions.csv",
+    "required_artifacts": [{
+      "id": "predictions",
+      "description": "Fixture predictions",
+      "paths": ["{submission}"],
+      "format": "csv",
+      "columns": ["sample_id", "prediction"]
+    }]
+  },
+  "data": {
+    "mode": "bundled",
+    "sources": [{
+      "id": "observations",
+      "name": "observations",
+      "package_path": "common_task/environment/input/data/observations.csv",
+      "path": "common_task/environment/input/data/observations.csv",
+      "role": "input",
+      "visibility": "public",
+      "availability": "bundled",
+      "identity": "fixture-observations",
+      "version": "1",
+      "content": {"format": "csv"},
+      "schema_description": "sample_id,target"
+    }]
+  },
+  "resource_estimate": {
+    "gpu_model": "NVIDIA A100",
+    "min_gpu_memory_gb": null,
+    "expected_solver_minutes": 5,
+    "basis": "Fixture validation",
+    "assumptions": ["Fixture input is present"]
+  },
+  "solver_access": "online_search"
+}

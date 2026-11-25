@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "scientific-task-pipeline"
+version = "0.1.0"
+description = "Stage1 source preparation, Stage2 scientific task construction, and Stage3 execution"
+requires-python = ">=3.10"
+dependencies = ["PyYAML", "requests", "openpyxl", "pypdf", "beautifulsoup4"]
+
+[project.optional-dependencies]
+scientific = ["pandas", "h5py"]
+
+[tool.setuptools.packages.find]
+where = ["src"]

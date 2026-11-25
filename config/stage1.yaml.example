@@ -1,0 +1,16 @@
+# Non-secret Stage1 defaults. Credentials are read from config/.env.
+source_catalog:
+  jina_xlsx: inputs/catalog/jina.xlsx
+  test_data_xlsx: inputs/catalog/test_data.xlsx
+  manual_csv: inputs/catalog/manual.csv
+selection:
+  max_records: 20
+  sample_domains: "物理,地理,化学,生物,天文"
+  review_policy: balanced
+network:
+  env_file: config/.env
+  proxy_url: ""
+materials:
+  data_mode: sample
+  max_file_mb: 500
+  max_total_gb: 10

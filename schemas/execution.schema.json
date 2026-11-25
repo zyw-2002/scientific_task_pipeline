@@ -1,0 +1,958 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pipeline.local/schemas/execution-v1.json",
+  "title": "Task execution configuration",
+  "description": "Only settings consumed by task execution, artifact checks and scoring; scientific prose is authored in instruction.md.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "task_id",
+    "submission",
+    "runtime",
+    "data"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "pipeline-execution-v1"
+    },
+    "task_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+    },
+    "submission": {
+      "type": "object",
+      "required": [
+        "path"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^/"
+        },
+        "validator_path": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^/"
+        },
+        "validator_command": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required_artifacts": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "description"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "additionalProperties": true
+          },
+          "description": "Required submission files and structural checks. Explain their scientific meaning directly in instruction.md."
+        }
+      },
+      "additionalProperties": false
+    },
+    "runtime": {
+      "type": "object",
+      "required": [
+        "data_dir",
+        "cpu",
+        "memory_mb",
+        "gpus",
+        "network_policy",
+        "time_limit_sec"
+      ],
+      "properties": {
+        "data_dir": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^/"
+        },
+        "cpu": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "memory_mb": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "gpus": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 8
+        },
+        "time_limit_sec": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Maximum Solver elapsed time in seconds; 0 explicitly means no elapsed-time limit."
+        },
+        "build_timeout_sec": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Image build elapsed-time limit in seconds; 0 disables the limit. When supplied, task.toml environment.build_timeout_sec must match."
+        },
+        "base_image": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^\\S+$",
+          "description": "Requested dependency base image shared by Solver and evaluator; retain the reference and verify actual dependencies and isolation."
+        },
+        "network_policy": {
+          "enum": [
+            "disabled",
+            "allowlisted",
+            "gateway_search_only",
+            "enabled"
+          ]
+        },
+        "allowed_hosts": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "search_policy": {
+          "enum": [
+            "none",
+            "gateway",
+            "direct"
+          ]
+        },
+        "gateway": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "eval_service_url": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "multimodal": {
+          "type": "object",
+          "required": [
+            "enabled"
+          ],
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "model_capability": {
+              "enum": [
+                "text",
+                "vision",
+                "unknown"
+              ],
+              "default": "text"
+            }
+          },
+          "additionalProperties": true,
+          "description": "Prepare Qwen inspection files from public originals; this is separate from scientific data identity and model endpoint vision capability."
+        },
+        "network": {
+          "type": "object",
+          "properties": {
+            "proxy_url": {
+              "type": "string"
+            },
+            "proxy_env_file": {
+              "type": "string"
+            },
+            "inherit_env": {
+              "type": "boolean"
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "no_proxy": {
+              "type": "string"
+            },
+            "probe_urls": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^https?://"
+              }
+            }
+          },
+          "additionalProperties": true,
+          "description": "Actual Solver data transport; gateway/model endpoints are configured separately."
+        },
+        "build_network": {
+          "type": "object",
+          "properties": {
+            "proxy_url": {
+              "type": "string"
+            },
+            "proxy_env_file": {
+              "type": "string"
+            },
+            "inherit_env": {
+              "type": "boolean"
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "no_proxy": {
+              "type": "string"
+            },
+            "probe_urls": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^https?://"
+              }
+            }
+          },
+          "additionalProperties": true,
+          "description": "Image build-only download proxy; never grants offline Solver internet access."
+        },
+        "image_policy": {
+          "type": "string",
+          "description": "deferred: no final task image yet; prebuilt: explicitly bound image. Deferred packages are static-only.",
+          "enum": [
+            "deferred",
+            "prebuilt"
+          ]
+        }
+      },
+      "additionalProperties": true,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "network_policy": {
+                "const": "allowlisted"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "allowed_hosts"
+            ],
+            "properties": {
+              "allowed_hosts": {
+                "minItems": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "search_policy": {
+                "const": "gateway"
+              }
+            },
+            "required": [
+              "search_policy"
+            ]
+          },
+          "then": {
+            "required": [
+              "gateway"
+            ],
+            "properties": {
+              "gateway": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "mode",
+        "sources"
+      ],
+      "properties": {
+        "mode": {
+          "enum": [
+            "bundled",
+            "referenced",
+            "mixed",
+            "generator",
+            "no_external_data"
+          ]
+        },
+        "note": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "url": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "path": {
+                "type": "string",
+                "minLength": 1
+              },
+              "materialization": {
+                "type": "string",
+                "minLength": 1
+              },
+              "acquisition": {
+                "type": "string",
+                "minLength": 1
+              },
+              "visibility": {
+                "enum": [
+                  "public",
+                  "guided",
+                  "private",
+                  "build_only"
+                ]
+              },
+              "size_bytes": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 0
+              },
+              "sha256": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "availability": {
+                "enum": [
+                  "runtime_download",
+                  "bundled",
+                  "preprovided",
+                  "unavailable",
+                  "unverified"
+                ],
+                "description": "Actual resource delivery state; for referenced/mixed required public resources, runtime_download (default) must agree with the Solver network policy. This declaration alone never proves real availability."
+              },
+              "required": {
+                "type": "boolean",
+                "description": "Set false only for optional public support material. Formal inputs, reference data, fixtures and all scoring or required preparation dependencies must be required."
+              },
+              "package_path": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Optional package-relative location used for private resource isolation; never render private paths into Solver acquisition manifests."
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "role": {
+                "enum": [
+                  "input",
+                  "reference",
+                  "fixture",
+                  "support"
+                ]
+              },
+              "origin": {
+                "enum": [
+                  "observation",
+                  "reference_implementation",
+                  "analytical",
+                  "simulation",
+                  "benchmark_policy",
+                  "fixture"
+                ]
+              },
+              "identity": {
+                "type": "string",
+                "minLength": 1
+              },
+              "version": {
+                "type": "string",
+                "minLength": 1
+              },
+              "content": {
+                "type": "object",
+                "required": [
+                  "format"
+                ],
+                "properties": {
+                  "format": {
+                    "enum": [
+                      "csv",
+                      "tsv",
+                      "json",
+                      "text",
+                      "binary",
+                      "directory",
+                      "npy"
+                    ]
+                  },
+                  "columns": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "row_count": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "id_column": {
+                    "type": "string"
+                  },
+                  "item_count": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "items_path": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "shape": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "members": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "pattern",
+                        "count"
+                      ],
+                      "properties": {
+                        "pattern": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "count": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      }
+                    }
+                  },
+                  "forbidden_keys": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "description": "Explicit per-resource CSV columns or recursive JSON keys to withhold, e.g. scoring answers. No global blacklist; training labels may be legitimate."
+                  }
+                }
+              },
+              "prepare": {
+                "type": "object",
+                "required": [
+                  "command",
+                  "validate",
+                  "access",
+                  "timeout_sec"
+                ],
+                "properties": {
+                  "command": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "validate": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "access": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "inputs": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "timeout_sec": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                }
+              },
+              "representative_sample": {
+                "type": "string",
+                "minLength": 1,
+                "description": "ID of a bundled representative sample, checked against the formal content schema before deferring materialization. A bound scoring-smoke fixture also qualifies."
+              },
+              "files_sha256": {
+                "type": "object",
+                "minProperties": 1,
+                "additionalProperties": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+                "description": "Complete directory member-to-SHA256 manifest for a pinned resource. Materialization validates the complete relative path set and every digest."
+              },
+              "align_with": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "description": "v1: CSV resource IDs whose complete ID sets must match this resource; each needs content.id_column."
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "additionalProperties": true,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "mode": {
+                "enum": [
+                  "referenced",
+                  "mixed",
+                  "generator"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "sources": {
+                "minItems": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mode": {
+                "const": "no_external_data"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "note"
+            ],
+            "properties": {
+              "note": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "framework": {
+      "type": "object",
+      "description": "Optional actual framework interfaces and package-relative path overrides; no fabricated endpoint is required.",
+      "additionalProperties": true
+    },
+    "preflight": {
+      "type": "object",
+      "required": [],
+      "properties": {
+        "cases": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "command",
+              "expected_status"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_.-]+$"
+              },
+              "command": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "fixture": {
+                "type": "string",
+                "minLength": 1
+              },
+              "expected_status": {
+                "enum": [
+                  "valid",
+                  "invalid_submission",
+                  "runtime_error",
+                  "unscorable",
+                  "success"
+                ]
+              },
+              "expected_exit_code": {
+                "type": "integer"
+              },
+              "expected_reward": {
+                "type": "number"
+              },
+              "reward_tolerance": {
+                "type": "number",
+                "minimum": 0
+              },
+              "result_file": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "verification": {
+      "type": "object",
+      "description": "Commands, calibration and actual score-evidence collection paths. Scientific interpretation remains in instruction.md and private implementation comments.",
+      "properties": {
+        "public_validation": {
+          "type": "object",
+          "required": [
+            "baseline_command",
+            "command",
+            "input_paths",
+            "prediction_path",
+            "metric",
+            "direction"
+          ],
+          "properties": {
+            "baseline_command": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "command": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "input_paths": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "prediction_path": {
+              "type": "string",
+              "minLength": 1
+            },
+            "metric": {
+              "type": "string",
+              "minLength": 1
+            },
+            "direction": {
+              "enum": [
+                "higher_is_better",
+                "lower_is_better"
+              ]
+            }
+          },
+          "description": "Solver-visible scientific validation split, baseline and metric commands. Validation prints a JSON object with metrics and positive integer num_samples."
+        },
+        "commands": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/command"
+          },
+          "description": "Task checks keyed by name, including data_identity, dependencies, scoring, scientific_handoff and gpu when applicable."
+        },
+        "hidden_container_paths": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "pattern": "^/",
+            "minLength": 2
+          },
+          "description": "Protected paths that must be absent from the Solver namespace; omit to use framework defaults. Also checked: actual private host mount isolation and shared image identity."
+        },
+        "score_evidence": {
+          "type": "object",
+          "required": [
+            "artifact_source",
+            "service"
+          ],
+          "properties": {
+            "artifact_source": {
+              "type": "string",
+              "pattern": "^/"
+            },
+            "service": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "description": "Evaluator-owned captured submission and score timeline, collected separately from Solver artifacts."
+        },
+        "evaluation_unit_artifact_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "calibration": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Optional custom calibration configurations. The default evaluation/calibration.json is discovered automatically; guard paths, container paths and commands are generated.",
+          "items": {
+            "type": "object",
+            "required": [
+              "config_path"
+            ],
+            "properties": {
+              "config_path": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Package-relative path to calibration.json."
+              },
+              "guard_path": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Program-generated. Package-relative path to the unmodified calibration_guard.py."
+              },
+              "config_container": {
+                "type": "string",
+                "pattern": "^/",
+                "minLength": 2,
+                "description": "Program-generated. Actual absolute calibration config path inside the evaluator."
+              },
+              "guard_container": {
+                "type": "string",
+                "pattern": "^/",
+                "minLength": 2,
+                "description": "Program-generated. Actual absolute guard script path inside the evaluator."
+              },
+              "runtime_check": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Optional scientific_ check name; generated when omitted."
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "scoring_smoke": {
+          "type": "object",
+          "required": [],
+          "properties": {
+            "config_path": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Package-relative scoring_smoke.json path; defaults to common_task/evaluation/scoring_smoke.json when present."
+            },
+            "runner_path": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Generated framework binding; do not invent."
+            },
+            "runner_container": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Generated framework binding; do not invent."
+            },
+            "config_container": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Generated framework binding; do not invent."
+            },
+            "runtime_check": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Generated framework binding; do not invent."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Optional explicit scoring controls for legacy compatibility. Generated when evaluation/scoring_smoke.json exists; invokes the real protocol through capture and score evidence."
+        }
+      },
+      "additionalProperties": true
+    },
+    "canonical_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Source paper identity, independent of task_id: one paper may define multiple tasks."
+    },
+    "scientific_acceptance_version": {
+      "type": "integer",
+      "enum": [
+        1,
+        2,
+        3
+      ]
+    },
+    "output_language": {
+      "const": "en"
+    },
+    "framework_generation_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Program-generated common wiring and executable required-artifact enforcement."
+    },
+    "resource_estimate": {
+      "type": "object",
+      "required": [
+        "gpu_model",
+        "expected_solver_minutes",
+        "basis",
+        "assumptions"
+      ],
+      "properties": {
+        "gpu_model": {
+          "const": "NVIDIA A100"
+        },
+        "min_gpu_memory_gb": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "expected_solver_minutes": {
+          "type": "integer",
+          "minimum": 30,
+          "maximum": 1440,
+          "description": "Estimated total solving time on the declared resources, not an enforced timeout or measured result."
+        },
+        "basis": {
+          "type": "string",
+          "minLength": 1
+        },
+        "assumptions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "evaluation_protocol_version": {
+      "const": 1,
+      "description": "Program-owned protocol version."
+    },
+    "assessment_contract_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "New construction resource and assessment contract; enforced by preflight."
+    },
+    "scope_contract_version": {
+      "type": "integer",
+      "enum": [
+        1,
+        2,
+        3
+      ],
+      "description": "New construction uses version 3 to bind all main experiments to sources, assessment requirements and independent review."
+    },
+    "difficulty_contract_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Opt into the source-backed paper-to-task difficulty alignment gate."
+    },
+    "paper_caption_review_version": {
+      "type": "integer",
+      "enum": [1, 2, 3],
+      "description": "Check labelled main-paper displays against the experiment inventory and reviewer decisions."
+    },
+    "paper_comparison_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "New tasks explicitly declare a verified comparable/unavailable/not_comparable paper anchor."
+    },
+    "solver_access": {
+      "type": "string",
+      "enum": [
+        "online_search"
+      ],
+      "description": "Host-bound user selection: Solver network enabled, scientific search direct."
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "command": {
+      "type": "object",
+      "required": [
+        "service",
+        "command"
+      ],
+      "properties": {
+        "service": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*$",
+          "description": "Actual service in the shared Compose environment; Solver for input/dependencies/GPU, evaluator for scoring."
+        },
+        "command": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Actual executed argv inside the selected container. No placeholder successful check is substituted."
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

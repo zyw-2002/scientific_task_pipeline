@@ -1,0 +1,6 @@
+{
+  "schema_version": "materials-manifest-v1",
+  "canonical_id": "fixture-paper-001",
+  "artifacts": [],
+  "source_root": "/fixture/pipeline/source_bundle"
+}

@@ -1,0 +1,1337 @@
+{
+  "schema_version": "pipline-trajectory-regressions-v1",
+  "source_path": "/u01/zhengyawen/pipline/analysis_tractory/v1/latest/judge/issues.jsonl",
+  "source_sha256": "0840ae3f1c0b6aa3cf166f211b6ad47d2676c29de04d95487a0aeede31187bda",
+  "issue_count": 33,
+  "runs_represented": 16,
+  "user_reported_trajectory_cohort_size": 40,
+  "issue_type_counts": {
+    "ENV": 5,
+    "F2": 1,
+    "F3": 6,
+    "F4": 7,
+    "F5": 12,
+    "F6": 1,
+    "F7": 1
+  },
+  "evidence_flag_counts": {
+    "quotes_and_step_match": 10,
+    "quotes_do_not_match": 23,
+    "declared_step_has_no_evidence": 14
+  },
+  "interpretation": "Original automated allegations and evidence flags are preserved, not promoted to human-verified facts. Checks are task-dependent obligations, not claims that these scientific tests have already run. Judge must use the actual task and target score attempt; early recovered errors and legal weak methods are not invalidity evidence.",
+  "checks": [
+    {
+      "check_id": "REG-HASH",
+      "stage": "stage2.source_intake",
+      "enforcement": "automated",
+      "requirement": "从实际字节计算 SHA-256，比较来源记录；不同文件的摘要分别计算，不把 PDF 的摘要用于抽取文本。",
+      "verification_status": "implementation_has_unit_test",
+      "automated_test": "tests/test_source_intake.py::SourceIntakeTests.test_hash_mismatch_is_unavailable_and_document_alias_cannot_bypass"
+    },
+    {
+      "check_id": "REG-DATASET",
+      "stage": "stage2.construct_verify",
+      "enforcement": "task_specific_evidence_check",
+      "requirement": "核对发布版本、目标实验、完整集/子集、维度和字段语义；解释不同处理阶段的数量差异。",
+      "verification_status": "not_run_for_scientific_tasks"
+    },
+    {
+      "check_id": "REG-LABELS",
+      "stage": "stage2.construct_verify",
+      "enforcement": "task_specific_evidence_check",
+      "requirement": "依据资料核对训练标签、候选集合、特殊类别、排除规则和每个输出的有效取值；不猜标签名称。",
+      "verification_status": "not_run_for_scientific_tasks"
+    },
+    {
+      "check_id": "REG-SPLIT",
+      "stage": "stage2.construct_verify",
+      "enforcement": "task_specific_dynamic_check",
+      "requirement": "用可手算的小例核对参与划分的对象、训练/测试成员、正负集合及各折评价对象；记录真实测试输出。",
+      "verification_status": "not_run_for_scientific_tasks"
+    },
+    {
+      "check_id": "REG-METRIC",
+      "stage": "stage2.construct_verify",
+      "enforcement": "task_specific_dynamic_check",
+      "requirement": "独立计算已知样例的公式、分母、参数、聚合和 reward；实际入口应给出一致结果。",
+      "verification_status": "not_run_for_scientific_tasks"
+    },
+    {
+      "check_id": "REG-SHAPE",
+      "stage": "stage2.construct_verify",
+      "enforcement": "task_specific_dynamic_check",
+      "requirement": "测试实际数组/稀疏矩阵/批处理/索引/重采样 API，验证边界和维度，不把人工样例当完整实验验证。",
+      "verification_status": "not_run_for_scientific_tasks"
+    },
+    {
+      "check_id": "REG-FINITE",
+      "stage": "stage2.construct_verify",
+      "enforcement": "task_specific_dynamic_check",
+      "requirement": "验证指标所需类别及评分集合，NaN/Infinity 或数学上未定义的成绩须明确报告，不伪装为合法零分。",
+      "verification_status": "not_run_for_scientific_tasks"
+    },
+    {
+      "check_id": "REG-SERIALIZE",
+      "stage": "stage2.construct_verify",
+      "enforcement": "task_specific_dynamic_check",
+      "requirement": "写出并重新解析任务真实提交格式，核对 schema、类型、字段和行数；JSON 严格解析，STAR 等用正确读取器。",
+      "verification_status": "not_run_for_scientific_tasks"
+    },
+    {
+      "check_id": "REG-SEQUENCE",
+      "stage": "stage2.construct_verify",
+      "enforcement": "task_specific_evidence_check",
+      "requirement": "依据原始资料固定参考序列与替换位置，以参考/无突变样例验证位置和原坐标。",
+      "verification_status": "not_run_for_scientific_tasks"
+    },
+    {
+      "check_id": "REG-DIRECTION",
+      "stage": "stage2.construct_verify",
+      "enforcement": "task_specific_dynamic_check",
+      "requirement": "核对预测量物理定义与指标方向；用已知优劣样例检查符号和差值方向。",
+      "verification_status": "not_run_for_scientific_tasks"
+    },
+    {
+      "check_id": "REG-RESOURCE",
+      "stage": "stage2.construct_verify",
+      "enforcement": "task_specific_dynamic_check",
+      "requirement": "区分来源确认、URL可访问、文件下载、Solver实际可读；在实际环境验证必要数据/权重的获取，失败留存日志和阻断。",
+      "verification_status": "not_run_for_scientific_tasks"
+    },
+    {
+      "check_id": "REG-SHELL",
+      "stage": "stage2.construct_verify",
+      "enforcement": "task_specific_dynamic_check",
+      "requirement": "检查实际调用参数和 shell 引号；使用参数数组或脚本文件，运行已知小例，避免把代码片段当 JSON。",
+      "verification_status": "not_run_for_scientific_tasks"
+    },
+    {
+      "check_id": "REG-API",
+      "stage": "stage2.construct_verify",
+      "enforcement": "task_specific_dynamic_check",
+      "requirement": "核对已安装版本的真实导入路径/函数签名/参数，运行最小实例；不把安装成功等同正确科学 API。",
+      "verification_status": "not_run_for_scientific_tasks"
+    },
+    {
+      "check_id": "REG-DEPENDENCY",
+      "stage": "stage2.construct_verify",
+      "enforcement": "task_specific_dynamic_check",
+      "requirement": "核对科学软件身份与兼容版本，容器中实际导入和运行最小计算，检查冲突；保留已确认错误库的信息。",
+      "verification_status": "not_run_for_scientific_tasks"
+    },
+    {
+      "check_id": "REG-NO-SUBSTITUTION",
+      "stage": "stage3.run_verify",
+      "enforcement": "trajectory_evidence_check",
+      "requirement": "以目标提交的输入身份和轨迹判断是否替换真实测试数据；允许的合成训练数据与数据增强不能自动判无效。",
+      "verification_status": "not_run_for_scientific_tasks"
+    },
+    {
+      "check_id": "REG-COORDINATES",
+      "stage": "stage2.construct_verify",
+      "enforcement": "task_specific_dynamic_check",
+      "requirement": "依据元数据核对物理单位、轴顺序、像素尺寸及变换，用已知位置检查取样区域。",
+      "verification_status": "not_run_for_scientific_tasks"
+    },
+    {
+      "check_id": "REG-IDS",
+      "stage": "stage2.construct_verify",
+      "enforcement": "task_specific_dynamic_check",
+      "requirement": "保留原始样本/特征 ID 并按 ID 对齐，检查缺失/重复/额外/重排；不能在 reset_index 后重造身份。",
+      "verification_status": "not_run_for_scientific_tasks"
+    },
+    {
+      "check_id": "REG-TARGET-ATTEMPT",
+      "stage": "stage3.run_verify",
+      "enforcement": "trajectory_evidence_check",
+      "requirement": "绑定 SCORE_ATTEMPT 的时间线、提交快照与摘要；追踪实际生成步骤和复用前序计算，核实错误是否已在目标评分前修复。",
+      "verification_status": "not_run_for_scientific_tasks"
+    },
+    {
+      "check_id": "REG-EVIDENCE",
+      "stage": "stage3.run_verify",
+      "enforcement": "trajectory_evidence_check",
+      "requirement": "核实步骤存在及短引用实际匹配；自动错误报告仅是待验证线索，不扩大方法限制，不把普通工程/网络失败计作弊。",
+      "verification_status": "not_run_for_scientific_tasks"
+    }
+  ],
+  "issues": [
+    {
+      "run_id": "experiment-01d29167990b3ee117931e06--blind",
+      "issue_id": "experiment-01d29167990b3ee117931e06--blind:p001",
+      "step": "step 6",
+      "types": [
+        "F6"
+      ],
+      "problem": "Agent recorded an incorrect SHA-256 hash in the diagnostic.md file. In step 3, the agent correctly verified the downloaded file's SHA-256 as '8a82712569fe85feae90cbf9f567996b6a45ffce3895a00e98e6e607c44222e3'. However, in step 6 when writing the diagnostic.md file, the agent recorded a different SHA-256 value: '8a82712569fe85feae90cbf9f567996b6a45ffce389535ca35ae85fca4585a8ba5dad6d7f3c677'. This appears to be a hybrid of the public asset SHA-256 (from the manifest) and the provenance SHA-256, indicating a copy-paste or transcription error. The task requires recording accurate information in the diagnostic file, and this misrecording constitutes an observation/evidence error.",
+      "all_quotes_exact": false,
+      "declared_step_has_evidence": false,
+      "semantic_status": "not_human_verified",
+      "warnings": [
+        "one_or_more_quotes_not_found_exactly",
+        "declared_error_step_has_no_matching_evidence"
+      ],
+      "reported_risk": "摘要转录混淆",
+      "establishes_solver_invalidity": false,
+      "protections": [
+        {
+          "stage": "stage2.source_intake",
+          "check_id": "REG-HASH",
+          "enforcement": "automated"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-TARGET-ATTEMPT",
+          "enforcement": "trajectory_evidence_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-EVIDENCE",
+          "enforcement": "trajectory_evidence_check"
+        }
+      ]
+    },
+    {
+      "run_id": "experiment-01d29167990b3ee117931e06--guided",
+      "issue_id": "experiment-01d29167990b3ee117931e06--guided:p001",
+      "step": "step 4",
+      "types": [
+        "F4"
+      ],
+      "problem": "Agent hardcoded 'imaging_artifact' as the artifact cell type name in the code, but the actual data uses 'dirt' as the imaging artifact category. The agent printed the complete cell type list which clearly showed 'dirt' among the 29 types, but failed to recognize it as the imaging artifact mentioned in the method guidance. This caused the artifact removal step to be skipped entirely in the first run, resulting in 10 domains instead of the required 9.",
+      "all_quotes_exact": false,
+      "declared_step_has_evidence": true,
+      "semantic_status": "not_human_verified",
+      "warnings": [
+        "one_or_more_quotes_not_found_exactly"
+      ],
+      "reported_risk": "特殊类别 dirt 与猜测名称不一致",
+      "establishes_solver_invalidity": false,
+      "protections": [
+        {
+          "stage": "stage2.construct_verify",
+          "check_id": "REG-LABELS",
+          "enforcement": "task_specific_evidence_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-TARGET-ATTEMPT",
+          "enforcement": "trajectory_evidence_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-EVIDENCE",
+          "enforcement": "trajectory_evidence_check"
+        }
+      ]
+    },
+    {
+      "run_id": "experiment-01d29167990b3ee117931e06--guided",
+      "issue_id": "experiment-01d29167990b3ee117931e06--guided:p002",
+      "step": "step 7",
+      "types": [
+        "F5"
+      ],
+      "problem": "The re-indexing code in solve_fix.py initializes new_labels array with -1 values and only assigns new labels to non-artifact clusters, leaving all cells in the artifact cluster with label -1. When np.bincount() is called on this array, it raises a ValueError because bincount cannot handle negative values. The artifact cluster cells were never assigned valid domain labels.",
+      "all_quotes_exact": true,
+      "declared_step_has_evidence": true,
+      "semantic_status": "not_human_verified",
+      "warnings": [],
+      "reported_risk": "排除类别后标签遗留 -1",
+      "establishes_solver_invalidity": false,
+      "protections": [
+        {
+          "stage": "stage2.construct_verify",
+          "check_id": "REG-LABELS",
+          "enforcement": "task_specific_evidence_check"
+        },
+        {
+          "stage": "stage2.construct_verify",
+          "check_id": "REG-SHAPE",
+          "enforcement": "task_specific_dynamic_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-TARGET-ATTEMPT",
+          "enforcement": "trajectory_evidence_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-EVIDENCE",
+          "enforcement": "trajectory_evidence_check"
+        }
+      ]
+    },
+    {
+      "run_id": "experiment-0471a3779528e144b769e1ae--blind",
+      "issue_id": "experiment-0471a3779528e144b769e1ae--blind:p001",
+      "step": "step 9 / step 14",
+      "types": [
+        "F4"
+      ],
+      "problem": "Agent used 71 known TSGs from the 2020plus repository (data/gene_lists/tsgs.txt) instead of the 50 known TSGs specified in the task description. The task explicitly states 'Training labels: 50 known TSGs from the TUSON high-confidence list (originally extracted from Cancer Gene Census v71)'. The agent noted the discrepancy ('task description says 50, but source has 71') but proceeded to use all 71 genes without attempting to locate the correct 50-gene TUSON list. This affects the training set and evaluation, as the evaluation protocol partitions 'the known TSGs' into folds.",
+      "all_quotes_exact": false,
+      "declared_step_has_evidence": false,
+      "semantic_status": "not_human_verified",
+      "warnings": [
+        "one_or_more_quotes_not_found_exactly",
+        "declared_error_step_has_no_matching_evidence"
+      ],
+      "reported_risk": "训练正例集合 50 与 71 不一致",
+      "establishes_solver_invalidity": false,
+      "protections": [
+        {
+          "stage": "stage2.construct_verify",
+          "check_id": "REG-DATASET",
+          "enforcement": "task_specific_evidence_check"
+        },
+        {
+          "stage": "stage2.construct_verify",
+          "check_id": "REG-LABELS",
+          "enforcement": "task_specific_evidence_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-TARGET-ATTEMPT",
+          "enforcement": "trajectory_evidence_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-EVIDENCE",
+          "enforcement": "trajectory_evidence_check"
+        }
+      ]
+    },
+    {
+      "run_id": "experiment-0471a3779528e144b769e1ae--blind",
+      "issue_id": "experiment-0471a3779528e144b769e1ae--blind:p002",
+      "step": "step 16",
+      "types": [
+        "F4"
+      ],
+      "problem": "Agent used features_pancan_subset.txt (5,100 genes) as the feature matrix instead of the expected ~17,948 or ~19,320 genes. The task description states 'Gene universe: ~17,948 genes' and data_description.md states 'Approximately 19,320 genes (rows) × 14 columns'. The agent found that the main mutsigcv_gene_features.txt (17,663 genes) lacked mutation count features and chose the test subset file instead. Additionally, the values in this subset are normalized fractions rather than the integer mutation counts specified in the task ('Frameshift: number of frameshift mutations'). The agent did not attempt to locate or construct the full feature matrix with the correct schema.",
+      "all_quotes_exact": false,
+      "declared_step_has_evidence": false,
+      "semantic_status": "not_human_verified",
+      "warnings": [
+        "one_or_more_quotes_not_found_exactly",
+        "declared_error_step_has_no_matching_evidence"
+      ],
+      "reported_risk": "5100子集替代完整特征矩阵且计数语义不同",
+      "establishes_solver_invalidity": false,
+      "protections": [
+        {
+          "stage": "stage2.construct_verify",
+          "check_id": "REG-DATASET",
+          "enforcement": "task_specific_evidence_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-TARGET-ATTEMPT",
+          "enforcement": "trajectory_evidence_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-EVIDENCE",
+          "enforcement": "trajectory_evidence_check"
+        }
+      ]
+    },
+    {
+      "run_id": "experiment-0471a3779528e144b769e1ae--blind",
+      "issue_id": "experiment-0471a3779528e144b769e1ae--blind:p003",
+      "step": "step 19",
+      "types": [
+        "F5"
+      ],
+      "problem": "Agent's cross-validation implementation does not follow the evaluation protocol. The protocol states 'The known TSGs are randomly partitioned into 5 folds', meaning only the known TSGs should be split into folds, with held-out TSGs as positives and all candidate genes as negatives for AUC computation. Instead, the agent used StratifiedKFold to partition ALL genes (both TSGs and candidates) into folds, and computed AUC on the test set which contains a mix of held-out TSGs and some candidate genes. This produces a different evaluation than specified.",
+      "all_quotes_exact": false,
+      "declared_step_has_evidence": false,
+      "semantic_status": "not_human_verified",
+      "warnings": [
+        "one_or_more_quotes_not_found_exactly",
+        "declared_error_step_has_no_matching_evidence"
+      ],
+      "reported_risk": "CV对全部基因划分而非指定正例",
+      "establishes_solver_invalidity": false,
+      "protections": [
+        {
+          "stage": "stage2.construct_verify",
+          "check_id": "REG-SPLIT",
+          "enforcement": "task_specific_dynamic_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-TARGET-ATTEMPT",
+          "enforcement": "trajectory_evidence_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-EVIDENCE",
+          "enforcement": "trajectory_evidence_check"
+        }
+      ]
+    },
+    {
+      "run_id": "experiment-0471a3779528e144b769e1ae--blind",
+      "issue_id": "experiment-0471a3779528e144b769e1ae--blind:p004",
+      "step": "step 19",
+      "types": [
+        "F5"
+      ],
+      "problem": "Agent's Consistency Error (CE) calculation is incorrect. The formula states 'N_negative = number of non-driver genes (all genes minus known TSGs)', meaning N_negative should be the total count of all candidate genes (5,029 in this case). However, the agent computed 'n_negative = (1 - y_test).sum()' which is only the number of negative samples in the current test fold, not the total number of candidate genes. This produces an incorrect CE value that is reported in scores.json.",
+      "all_quotes_exact": false,
+      "declared_step_has_evidence": false,
+      "semantic_status": "not_human_verified",
+      "warnings": [
+        "one_or_more_quotes_not_found_exactly",
+        "declared_error_step_has_no_matching_evidence"
+      ],
+      "reported_risk": "CE分母使用当前折而非全部候选",
+      "establishes_solver_invalidity": false,
+      "protections": [
+        {
+          "stage": "stage2.construct_verify",
+          "check_id": "REG-METRIC",
+          "enforcement": "task_specific_dynamic_check"
+        },
+        {
+          "stage": "stage2.construct_verify",
+          "check_id": "REG-SPLIT",
+          "enforcement": "task_specific_dynamic_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-TARGET-ATTEMPT",
+          "enforcement": "trajectory_evidence_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-EVIDENCE",
+          "enforcement": "trajectory_evidence_check"
+        }
+      ]
+    },
+    {
+      "run_id": "experiment-0471a3779528e144b769e1ae--guided",
+      "issue_id": "experiment-0471a3779528e144b769e1ae--guided:p001",
+      "step": "step 29",
+      "types": [
+        "F5"
+      ],
+      "problem": "Agent's first implementation of solve_lotus.py contained an IndexError in the cross-validation function. The code attempted to access zero example indices using `range(len(X_all), len(X_all) + n_zero)` on the array `X_all`, but `X_all` only has 18843 rows (indices 0-18842). The zero examples were stored in `X_with_zero`, not `X_all`, so the correct indexing should have used `X_with_zero` with appropriate offset. This caused the script to crash with 'IndexError: index 18843 is out of bounds for axis 0 with size 18843'.",
+      "all_quotes_exact": true,
+      "declared_step_has_evidence": true,
+      "semantic_status": "not_human_verified",
+      "warnings": [],
+      "reported_risk": "增广样例索引了未增广数组",
+      "establishes_solver_invalidity": false,
+      "protections": [
+        {
+          "stage": "stage2.construct_verify",
+          "check_id": "REG-SHAPE",
+          "enforcement": "task_specific_dynamic_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-TARGET-ATTEMPT",
+          "enforcement": "trajectory_evidence_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-EVIDENCE",
+          "enforcement": "trajectory_evidence_check"
+        }
+      ]
+    },
+    {
+      "run_id": "experiment-0471a3779528e144b769e1ae--guided",
+      "issue_id": "experiment-0471a3779528e144b769e1ae--guided:p002",
+      "step": "step 30",
+      "types": [
+        "F5"
+      ],
+      "problem": "Agent's second implementation produced NaN for all AUC and CE values across all 10 folds. The root cause was in the evaluation label construction: `y_true` was initialized as all zeros for candidate_indices, then the code checked `if idx in test_tsg_indices` to set positives. However, candidate_indices was defined as genes NOT in known_tsgs, so no candidate index could ever match a test_tsg_index. This resulted in y_true being all zeros, making AUC undefined (NaN). The held-out TSGs needed to be explicitly included in the scoring set for proper evaluation.",
+      "all_quotes_exact": true,
+      "declared_step_has_evidence": true,
+      "semantic_status": "not_human_verified",
+      "warnings": [],
+      "reported_risk": "评分集排除全部正例导致AUC/CE为NaN",
+      "establishes_solver_invalidity": false,
+      "protections": [
+        {
+          "stage": "stage2.construct_verify",
+          "check_id": "REG-SPLIT",
+          "enforcement": "task_specific_dynamic_check"
+        },
+        {
+          "stage": "stage2.construct_verify",
+          "check_id": "REG-FINITE",
+          "enforcement": "task_specific_dynamic_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-TARGET-ATTEMPT",
+          "enforcement": "trajectory_evidence_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-EVIDENCE",
+          "enforcement": "trajectory_evidence_check"
+        }
+      ]
+    },
+    {
+      "run_id": "experiment-0471a3779528e144b769e1ae--guided",
+      "issue_id": "experiment-0471a3779528e144b769e1ae--guided:p003",
+      "step": "step 31",
+      "types": [
+        "F3"
+      ],
+      "problem": "Agent's response contained invalid JSON. The response included raw Python code snippets with syntax like `float(mean_ce)` directly inside a JSON-like structure, which cannot be parsed as valid JSON. The system returned: 'ERROR: Invalid JSON: Expecting value: line 2 column 26 (char 27)'. The Agent attempted to include code blocks within the JSON response without proper escaping or structure.",
+      "all_quotes_exact": true,
+      "declared_step_has_evidence": true,
+      "semantic_status": "not_human_verified",
+      "warnings": [],
+      "reported_risk": "JSON中混入未经序列化的Python表达式",
+      "establishes_solver_invalidity": false,
+      "protections": [
+        {
+          "stage": "stage2.construct_verify",
+          "check_id": "REG-SERIALIZE",
+          "enforcement": "task_specific_dynamic_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-TARGET-ATTEMPT",
+          "enforcement": "trajectory_evidence_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-EVIDENCE",
+          "enforcement": "trajectory_evidence_check"
+        }
+      ]
+    },
+    {
+      "run_id": "experiment-05a53e346acfc85186c70485--blind",
+      "issue_id": "experiment-05a53e346acfc85186c70485--blind:p001",
+      "step": "step 10-11",
+      "types": [
+        "F4"
+      ],
+      "problem": "Agent incorrectly mapped the 4-mer test sequences to positions 4-7 of the 11-mer (using flanking CACC + 4mer + GGT), assuming the native 4-mer is ACGT. Analysis of substitution counts in step 20 revealed the native 4-mer is CCAC (0 substitutions), meaning the 4-mer replaces positions 2-5. The correct construction is CA + 4mer + GTGGT. This was fixed in solve_v3.py (step 21).",
+      "all_quotes_exact": false,
+      "declared_step_has_evidence": false,
+      "semantic_status": "not_human_verified",
+      "warnings": [
+        "one_or_more_quotes_not_found_exactly",
+        "declared_error_step_has_no_matching_evidence"
+      ],
+      "reported_risk": "4-mer替换位置与参考序列不匹配",
+      "establishes_solver_invalidity": false,
+      "protections": [
+        {
+          "stage": "stage2.construct_verify",
+          "check_id": "REG-SEQUENCE",
+          "enforcement": "task_specific_evidence_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-TARGET-ATTEMPT",
+          "enforcement": "trajectory_evidence_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-EVIDENCE",
+          "enforcement": "trajectory_evidence_check"
+        }
+      ]
+    },
+    {
+      "run_id": "experiment-05a53e346acfc85186c70485--blind",
+      "issue_id": "experiment-05a53e346acfc85186c70485--blind:p002",
+      "step": "step 20-21",
+      "types": [
+        "F5"
+      ],
+      "problem": "Agent identified that the prediction sign is wrong: the energy model computes ddG = E(test) - E(native) where higher E means more favorable binding (stronger binding), but the task requires lower values for stronger binding. The agent explicitly stated 'the correlation would be NEGATIVE. I need to negate my predictions' and 'Let me fix this. I should negate the energy matrix.' However, the final submission solve_v3.py still computes 'ddg += energy_matrix[pos][test_nt] - energy_matrix[pos][native_nt]' without negation, producing predictions with the wrong sign that would yield negative Pearson correlation with experimental values.",
+      "all_quotes_exact": false,
+      "declared_step_has_evidence": false,
+      "semantic_status": "not_human_verified",
+      "warnings": [
+        "one_or_more_quotes_not_found_exactly",
+        "declared_error_step_has_no_matching_evidence"
+      ],
+      "reported_risk": "声明修正符号但目标生成代码未落实",
+      "establishes_solver_invalidity": false,
+      "protections": [
+        {
+          "stage": "stage2.construct_verify",
+          "check_id": "REG-DIRECTION",
+          "enforcement": "task_specific_dynamic_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-TARGET-ATTEMPT",
+          "enforcement": "trajectory_evidence_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-EVIDENCE",
+          "enforcement": "trajectory_evidence_check"
+        }
+      ]
+    },
+    {
+      "run_id": "experiment-06101173bd244057053e22d7--blind",
+      "issue_id": "experiment-06101173bd244057053e22d7--blind:p001",
+      "step": "11",
+      "types": [
+        "ENV"
+      ],
+      "problem": "Agent attempted to download a genomic foundation model from HuggingFace (InstaDeepAI/nucleotide-transformer-v2-100m-multi-species) but the connection was repeatedly reset by peer. This prevented the Agent from using a genomic foundation model as required by the task, forcing it to fall back to k-mer frequency features with traditional ML classifiers instead of the required genomic foundation model with max pooling and linear classification head.",
+      "all_quotes_exact": false,
+      "declared_step_has_evidence": true,
+      "semantic_status": "not_human_verified",
+      "warnings": [
+        "one_or_more_quotes_not_found_exactly"
+      ],
+      "reported_risk": "必要模型下载连接重置后方法被替代",
+      "establishes_solver_invalidity": false,
+      "protections": [
+        {
+          "stage": "stage2.construct_verify",
+          "check_id": "REG-RESOURCE",
+          "enforcement": "task_specific_dynamic_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-EVIDENCE",
+          "enforcement": "trajectory_evidence_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-TARGET-ATTEMPT",
+          "enforcement": "trajectory_evidence_check"
+        }
+      ]
+    },
+    {
+      "run_id": "experiment-06101173bd244057053e22d7--blind",
+      "issue_id": "experiment-06101173bd244057053e22d7--blind:p002",
+      "step": "15",
+      "types": [
+        "F3"
+      ],
+      "problem": "Agent used incorrect shell quoting when verifying predictions.json with python3 -c, causing a NameError. The nested double quotes around dictionary keys were not properly escaped, causing the shell to misinterpret the command structure. The error was immediately fixed in step 16 by using a heredoc approach.",
+      "all_quotes_exact": true,
+      "declared_step_has_evidence": true,
+      "semantic_status": "not_human_verified",
+      "warnings": [],
+      "reported_risk": "嵌套shell引号导致检查命令错误",
+      "establishes_solver_invalidity": false,
+      "protections": [
+        {
+          "stage": "stage2.construct_verify",
+          "check_id": "REG-SHELL",
+          "enforcement": "task_specific_dynamic_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-TARGET-ATTEMPT",
+          "enforcement": "trajectory_evidence_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-EVIDENCE",
+          "enforcement": "trajectory_evidence_check"
+        }
+      ]
+    },
+    {
+      "run_id": "experiment-06101173bd244057053e22d7--guided",
+      "issue_id": "experiment-06101173bd244057053e22d7--guided:p001",
+      "step": "step 4",
+      "types": [
+        "ENV"
+      ],
+      "problem": "Agent attempted to download the genomic foundation model 'InstaDeepAI/nucleotide-transformer-v2-50m-multi-species' from HuggingFace Hub, but the connection failed with 'ConnectionError: Connection reset by peer'. This prevented the Agent from using a genomic foundation model as explicitly required by the task ('Use a genomic foundation model available from HuggingFace Hub') and the Method guidance. The Agent correctly identified this as an environmental issue and documented it in diagnostic.md, then implemented a k-mer + XGBoost fallback approach. The final submission did not use a genomic foundation model, max pooling over token representations, or a linear classification head on pooled representations as required.",
+      "all_quotes_exact": false,
+      "declared_step_has_evidence": true,
+      "semantic_status": "not_human_verified",
+      "warnings": [
+        "one_or_more_quotes_not_found_exactly"
+      ],
+      "reported_risk": "模型下载连接重置与方法要求核对",
+      "establishes_solver_invalidity": false,
+      "protections": [
+        {
+          "stage": "stage2.construct_verify",
+          "check_id": "REG-RESOURCE",
+          "enforcement": "task_specific_dynamic_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-EVIDENCE",
+          "enforcement": "trajectory_evidence_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-TARGET-ATTEMPT",
+          "enforcement": "trajectory_evidence_check"
+        }
+      ]
+    },
+    {
+      "run_id": "experiment-068eb7090d85f66745c24a6a--blind",
+      "issue_id": "experiment-068eb7090d85f66745c24a6a--blind:p001",
+      "step": "Step 8",
+      "types": [
+        "ENV"
+      ],
+      "problem": "Zenodo API access was blocked with HTTP 403 Forbidden error. The Agent attempted to access https://zenodo.org/api/records/3707702 to download test data as specified in the task documentation, but received 'Access to this resource has been restricted due to unusual traffic from your network.' This external blocking prevented the Agent from obtaining the required test data, which was the primary data source referenced in the task files.",
+      "all_quotes_exact": false,
+      "declared_step_has_evidence": true,
+      "semantic_status": "not_human_verified",
+      "warnings": [
+        "one_or_more_quotes_not_found_exactly"
+      ],
+      "reported_risk": "Zenodo 403阻断必要测试数据",
+      "establishes_solver_invalidity": false,
+      "protections": [
+        {
+          "stage": "stage2.construct_verify",
+          "check_id": "REG-RESOURCE",
+          "enforcement": "task_specific_dynamic_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-TARGET-ATTEMPT",
+          "enforcement": "trajectory_evidence_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-EVIDENCE",
+          "enforcement": "trajectory_evidence_check"
+        }
+      ]
+    },
+    {
+      "run_id": "experiment-068eb7090d85f66745c24a6a--blind",
+      "issue_id": "experiment-068eb7090d85f66745c24a6a--blind:p002",
+      "step": "Step 23",
+      "types": [
+        "F3"
+      ],
+      "problem": "Agent used incorrect parameter names when calling the CTRW constructor. The Agent passed alpha=1.0 and beta=0.7 as keyword arguments in the generate_trajectories function call, but the CTRW.__init__() method signature is CTRW(t_len, ind_waiting, ind_jump, init_position=0), expecting ind_waiting and ind_jump as the second and third parameters. This caused a TypeError and prevented training data generation for the CTRW model until the Agent corrected the parameter names in step 24.",
+      "all_quotes_exact": true,
+      "declared_step_has_evidence": true,
+      "semantic_status": "not_human_verified",
+      "warnings": [],
+      "reported_risk": "CTRW构造器参数名错误",
+      "establishes_solver_invalidity": false,
+      "protections": [
+        {
+          "stage": "stage2.construct_verify",
+          "check_id": "REG-API",
+          "enforcement": "task_specific_dynamic_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-TARGET-ATTEMPT",
+          "enforcement": "trajectory_evidence_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-EVIDENCE",
+          "enforcement": "trajectory_evidence_check"
+        }
+      ]
+    },
+    {
+      "run_id": "experiment-068eb7090d85f66745c24a6a--blind",
+      "issue_id": "experiment-068eb7090d85f66745c24a6a--blind:p003",
+      "step": "Step 28",
+      "types": [
+        "F3"
+      ],
+      "problem": "Agent's code for generating MultipleStates/LW trajectories was missing the required v_velocity parameter. The LW constructor signature is LW(t_len, v_waiting, v_velocity, transition_matrix, init_state, init_position=0), requiring 5 positional arguments plus an optional init_position. However, the Agent's generate_trajectories function only passed v_waiting, transition_matrix, and init_state through kwargs, omitting v_velocity entirely. This caused a TypeError and prevented training data generation for the MultipleStates model until the Agent added the missing parameter in step 31.",
+      "all_quotes_exact": true,
+      "declared_step_has_evidence": true,
+      "semantic_status": "not_human_verified",
+      "warnings": [],
+      "reported_risk": "LW构造器遗漏v_velocity",
+      "establishes_solver_invalidity": false,
+      "protections": [
+        {
+          "stage": "stage2.construct_verify",
+          "check_id": "REG-API",
+          "enforcement": "task_specific_dynamic_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-TARGET-ATTEMPT",
+          "enforcement": "trajectory_evidence_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-EVIDENCE",
+          "enforcement": "trajectory_evidence_check"
+        }
+      ]
+    },
+    {
+      "run_id": "experiment-068eb7090d85f66745c24a6a--blind",
+      "issue_id": "experiment-068eb7090d85f66745c24a6a--blind:p004",
+      "step": "Step 31",
+      "types": [
+        "F5"
+      ],
+      "problem": "Agent's trajectory resampling logic failed to ensure all generated trajectories had consistent lengths. Different simulation models (CTRW, FBM, LevyWalk, AlternatingProcess, MultipleStates) produced trajectories with varying numbers of time steps, and the resampling code in the generate_2d_trajectory function did not correctly normalize all trajectories to exactly 50 points for both x and y coordinates. When attempting to create a numpy array from the list of 2500 trajectories with different lengths, this caused a ValueError due to inhomogeneous shape.",
+      "all_quotes_exact": false,
+      "declared_step_has_evidence": true,
+      "semantic_status": "not_human_verified",
+      "warnings": [
+        "one_or_more_quotes_not_found_exactly"
+      ],
+      "reported_risk": "模拟轨迹未归一到统一长度",
+      "establishes_solver_invalidity": false,
+      "protections": [
+        {
+          "stage": "stage2.construct_verify",
+          "check_id": "REG-SHAPE",
+          "enforcement": "task_specific_dynamic_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-TARGET-ATTEMPT",
+          "enforcement": "trajectory_evidence_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-EVIDENCE",
+          "enforcement": "trajectory_evidence_check"
+        }
+      ]
+    },
+    {
+      "run_id": "experiment-068eb7090d85f66745c24a6a--blind",
+      "issue_id": "experiment-068eb7090d85f66745c24a6a--blind:p005",
+      "step": "Step 33",
+      "types": [
+        "F5"
+      ],
+      "problem": "Agent wrote invalid Python syntax in the feature extraction function. The Agent attempted to include variable assignment statements (dx = np.diff(x), dy = np.diff(y), angles = np.arctan2(...)) inside a list literal that was being constructed for the features array. Python does not allow assignment statements inside list literals, causing a SyntaxError. This prevented the classifier from being built until the Agent restructured the code to compute these variables before the list literal in step 34.",
+      "all_quotes_exact": false,
+      "declared_step_has_evidence": true,
+      "semantic_status": "not_human_verified",
+      "warnings": [
+        "one_or_more_quotes_not_found_exactly"
+      ],
+      "reported_risk": "列表字面量内使用赋值语句产生语法错误",
+      "establishes_solver_invalidity": false,
+      "protections": [
+        {
+          "stage": "stage2.construct_verify",
+          "check_id": "REG-SERIALIZE",
+          "enforcement": "task_specific_dynamic_check"
+        },
+        {
+          "stage": "stage2.construct_verify",
+          "check_id": "REG-SHELL",
+          "enforcement": "task_specific_dynamic_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-TARGET-ATTEMPT",
+          "enforcement": "trajectory_evidence_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-EVIDENCE",
+          "enforcement": "trajectory_evidence_check"
+        }
+      ]
+    },
+    {
+      "run_id": "experiment-068eb7090d85f66745c24a6a--blind",
+      "issue_id": "experiment-068eb7090d85f66745c24a6a--blind:p006",
+      "step": "Step 46",
+      "types": [
+        "F7"
+      ],
+      "problem": "Agent re-installed the wrong 'andi' package (a dependency injection library, not the anomalous diffusion simulator) after having already determined in steps 11-12 that it was incorrect. In step 11, the Agent discovered that 'import andi' loaded a dependency injection library rather than the anomalous diffusion simulator. In step 12, the Agent explicitly uninstalled it. However, in step 46, the Agent ran 'pip install andi' again without any new justification or investigation, indicating a failure to maintain context about this previous finding. The Agent immediately uninstalled it again in step 47.",
+      "all_quotes_exact": false,
+      "declared_step_has_evidence": false,
+      "semantic_status": "not_human_verified",
+      "warnings": [
+        "one_or_more_quotes_not_found_exactly",
+        "declared_error_step_has_no_matching_evidence"
+      ],
+      "reported_risk": "反复安装已经确认不匹配的andi同名库",
+      "establishes_solver_invalidity": false,
+      "protections": [
+        {
+          "stage": "stage2.construct_verify",
+          "check_id": "REG-DEPENDENCY",
+          "enforcement": "task_specific_dynamic_check"
+        },
+        {
+          "stage": "stage2.construct_verify",
+          "check_id": "REG-API",
+          "enforcement": "task_specific_dynamic_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-TARGET-ATTEMPT",
+          "enforcement": "trajectory_evidence_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-EVIDENCE",
+          "enforcement": "trajectory_evidence_check"
+        }
+      ]
+    },
+    {
+      "run_id": "experiment-068eb7090d85f66745c24a6a--guided",
+      "issue_id": "experiment-068eb7090d85f66745c24a6a--guided:p001",
+      "step": "step 24",
+      "types": [
+        "F4"
+      ],
+      "problem": "Agent generated its own synthetic test data and made predictions on it, rather than obtaining the actual test data. The task requires classifying actual test trajectories, but the agent created 11,500 synthetic test trajectories using the same generation process as training data, then produced predictions for this self-generated data. Since the agent knows the true labels of this synthetic data (saved as y_test_true.npy), the predictions are essentially self-evaluation on data the agent created, not predictions for the actual held-out test set. When graded against the real test data (if provisioned later), these predictions will be meaningless because they correspond to different trajectories.",
+      "all_quotes_exact": false,
+      "declared_step_has_evidence": false,
+      "semantic_status": "not_human_verified",
+      "warnings": [
+        "one_or_more_quotes_not_found_exactly",
+        "declared_error_step_has_no_matching_evidence"
+      ],
+      "reported_risk": "自行生成测试轨迹替代指定真实测试集",
+      "establishes_solver_invalidity": false,
+      "protections": [
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-NO-SUBSTITUTION",
+          "enforcement": "trajectory_evidence_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-TARGET-ATTEMPT",
+          "enforcement": "trajectory_evidence_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-EVIDENCE",
+          "enforcement": "trajectory_evidence_check"
+        }
+      ]
+    },
+    {
+      "run_id": "experiment-06a1a5f104c7f175764397cd--blind",
+      "issue_id": "experiment-06a1a5f104c7f175764397cd--blind:p001",
+      "step": "step 23-24",
+      "types": [
+        "F4"
+      ],
+      "problem": "Agent downloaded the wrong dataset. The task describes 'Xenium Human Breast Cancer preview dataset' from xenium-1.0.2 with 313 genes and non-overlapping panels (Panel A: 150 genes, Panel B: 163 genes). However, the Agent downloaded 'Human_Breast_Biomarkers_S1_Top' and 'Human_Breast_Biomarkers_S2_Top' from xenium-4.0.0, which is a completely different dataset. The downloaded data has 542 genes with identical panels on both sections, not the 313 genes with non-overlapping panels described in the task.",
+      "all_quotes_exact": false,
+      "declared_step_has_evidence": false,
+      "semantic_status": "not_human_verified",
+      "warnings": [
+        "one_or_more_quotes_not_found_exactly",
+        "declared_error_step_has_no_matching_evidence"
+      ],
+      "reported_risk": "Xenium 4.0数据替代1.0.2实验",
+      "establishes_solver_invalidity": false,
+      "protections": [
+        {
+          "stage": "stage2.construct_verify",
+          "check_id": "REG-DATASET",
+          "enforcement": "task_specific_evidence_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-NO-SUBSTITUTION",
+          "enforcement": "trajectory_evidence_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-TARGET-ATTEMPT",
+          "enforcement": "trajectory_evidence_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-EVIDENCE",
+          "enforcement": "trajectory_evidence_check"
+        }
+      ]
+    },
+    {
+      "run_id": "experiment-06a1a5f104c7f175764397cd--blind",
+      "issue_id": "experiment-06a1a5f104c7f175764397cd--blind:p002",
+      "step": "step 38",
+      "types": [
+        "F4"
+      ],
+      "problem": "Agent created an incorrect gene panel split. The Agent split 542 genes into Panel A (271) and Panel B (271) based on alphabetical ordering. This resulted in Panel B consisting entirely of negative control codewords (NegControlCodeword_*), not real genes. The split makes the prediction task meaningless because negative controls are not biologically meaningful genes to predict.",
+      "all_quotes_exact": false,
+      "declared_step_has_evidence": false,
+      "semantic_status": "not_human_verified",
+      "warnings": [
+        "one_or_more_quotes_not_found_exactly",
+        "declared_error_step_has_no_matching_evidence"
+      ],
+      "reported_risk": "按字母顺序划分面板导致负控充当基因",
+      "establishes_solver_invalidity": false,
+      "protections": [
+        {
+          "stage": "stage2.construct_verify",
+          "check_id": "REG-DATASET",
+          "enforcement": "task_specific_evidence_check"
+        },
+        {
+          "stage": "stage2.construct_verify",
+          "check_id": "REG-LABELS",
+          "enforcement": "task_specific_evidence_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-TARGET-ATTEMPT",
+          "enforcement": "trajectory_evidence_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-EVIDENCE",
+          "enforcement": "trajectory_evidence_check"
+        }
+      ]
+    },
+    {
+      "run_id": "experiment-06a1a5f104c7f175764397cd--guided",
+      "issue_id": "experiment-06a1a5f104c7f175764397cd--guided:p001",
+      "step": "step 170 (solution.py execution, image feature extraction)",
+      "types": [
+        "F5"
+      ],
+      "problem": "The Agent extracts image patches from the morphology image using micrometer coordinates directly as pixel indices (`px, py = int(x), int(y)`), assuming a 1:1 mapping between micrometers and pixels. However, the task description and data description explicitly state that spatial coordinates are 'in micrometers', while the morphology image dimensions are in pixels (25778×35416 for Rep1, 25779×35411 for Rep2). The coordinate ranges (X: 2.41–7522.19, Y: 1.50–5472.49) are much smaller than the image dimensions, indicating a pixel-to-micrometer ratio of approximately 4.7. This means patches are extracted from locations that are ~4.7× closer to the origin than the correct locations, resulting in image features from completely wrong tissue regions for each cell.",
+      "all_quotes_exact": false,
+      "declared_step_has_evidence": false,
+      "semantic_status": "not_human_verified",
+      "warnings": [
+        "one_or_more_quotes_not_found_exactly",
+        "declared_error_step_has_no_matching_evidence"
+      ],
+      "reported_risk": "微米坐标直接用于像素索引",
+      "establishes_solver_invalidity": false,
+      "protections": [
+        {
+          "stage": "stage2.construct_verify",
+          "check_id": "REG-COORDINATES",
+          "enforcement": "task_specific_dynamic_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-TARGET-ATTEMPT",
+          "enforcement": "trajectory_evidence_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-EVIDENCE",
+          "enforcement": "trajectory_evidence_check"
+        }
+      ]
+    },
+    {
+      "run_id": "experiment-070cdf476710e90f0547e5ee--blind",
+      "issue_id": "experiment-070cdf476710e90f0547e5ee--blind:p001",
+      "step": "step 22",
+      "types": [
+        "F3"
+      ],
+      "problem": "Agent used `np.erf()` to compute the error function for the spherical mask, but NumPy does not have an `erf` attribute. The correct function is `scipy.special.erf`. This caused an AttributeError that prevented mask creation from completing.",
+      "all_quotes_exact": true,
+      "declared_step_has_evidence": true,
+      "semantic_status": "not_human_verified",
+      "warnings": [],
+      "reported_risk": "误用不存在的np.erf API",
+      "establishes_solver_invalidity": false,
+      "protections": [
+        {
+          "stage": "stage2.construct_verify",
+          "check_id": "REG-API",
+          "enforcement": "task_specific_dynamic_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-TARGET-ATTEMPT",
+          "enforcement": "trajectory_evidence_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-EVIDENCE",
+          "enforcement": "trajectory_evidence_check"
+        }
+      ]
+    },
+    {
+      "run_id": "experiment-070cdf476710e90f0547e5ee--blind",
+      "issue_id": "experiment-070cdf476710e90f0547e5ee--blind:p002",
+      "step": "step 24",
+      "types": [
+        "F5"
+      ],
+      "problem": "Agent's `rotate_volume` function used `np.ogrid` to create coordinate arrays, which produces arrays with incompatible shapes (each dimension is singleton except one). Attempting to combine these into a single array with `np.array([z - center[0], y - center[1], x - center[2]])` fails because the resulting inhomogeneous structure cannot be converted to a regular array.",
+      "all_quotes_exact": false,
+      "declared_step_has_evidence": true,
+      "semantic_status": "not_human_verified",
+      "warnings": [
+        "one_or_more_quotes_not_found_exactly"
+      ],
+      "reported_risk": "ogrid广播形状未统一",
+      "establishes_solver_invalidity": false,
+      "protections": [
+        {
+          "stage": "stage2.construct_verify",
+          "check_id": "REG-SHAPE",
+          "enforcement": "task_specific_dynamic_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-TARGET-ATTEMPT",
+          "enforcement": "trajectory_evidence_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-EVIDENCE",
+          "enforcement": "trajectory_evidence_check"
+        }
+      ]
+    },
+    {
+      "run_id": "experiment-070cdf476710e90f0547e5ee--blind",
+      "issue_id": "experiment-070cdf476710e90f0547e5ee--blind:p003",
+      "step": "step 24",
+      "types": [
+        "F3"
+      ],
+      "problem": "Agent called `starfile.write({'particles': particles}, output_file, overwrite=True)` where `particles` is a list of dictionaries. The starfile package does not correctly interpret a dict-of-lists structure for STAR file output; it wrote the data as a Python list representation (e.g., `_particles [{'rlnCoordinateX': 423.0, ...}]`) instead of proper STAR format with loop_ headers and columnar data rows. The correct approach is to pass a pandas DataFrame.",
+      "all_quotes_exact": false,
+      "declared_step_has_evidence": true,
+      "semantic_status": "not_human_verified",
+      "warnings": [
+        "one_or_more_quotes_not_found_exactly"
+      ],
+      "reported_risk": "STAR写入数据结构错误未重新解析",
+      "establishes_solver_invalidity": false,
+      "protections": [
+        {
+          "stage": "stage2.construct_verify",
+          "check_id": "REG-SERIALIZE",
+          "enforcement": "task_specific_dynamic_check"
+        },
+        {
+          "stage": "stage2.construct_verify",
+          "check_id": "REG-API",
+          "enforcement": "task_specific_dynamic_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-TARGET-ATTEMPT",
+          "enforcement": "trajectory_evidence_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-EVIDENCE",
+          "enforcement": "trajectory_evidence_check"
+        }
+      ]
+    },
+    {
+      "run_id": "experiment-0870625ca6ae8a3e4530e735--guided",
+      "issue_id": "experiment-0870625ca6ae8a3e4530e735--guided:p001",
+      "step": "step 28 (input file creation) and step 45 (prediction file creation)",
+      "types": [
+        "F5"
+      ],
+      "problem": "The Agent creates input CSV files and prediction CSV files with inconsistent cell_id values. In step 28, cell_ids are constructed using `df['cell_id'] = df['sample'] + '_' + df.index.astype(str)` where `df.index` refers to the row index in the full 734K-row expression dataframe. After filtering by sample and calling `sdf.reset_index(drop=True)`, the cell_id column retains the original (non-reset) index values. However, in step 45, prediction cell_ids are constructed using `sdf['sample'] + '_' + sdf.index.astype(str)` AFTER `sdf.reset_index(drop=True)`, so they use reset indices starting from 0 for each sample. Since the samples are not contiguous in the expression file (the header shows rows from BALBc-3 and BALBc-2 appearing first), the cell_ids in the input files (e.g., `BALBc-2_85572`, `BALBc-3_170870`) do not match the cell_ids in the prediction files (e.g., `BALBc-2_0`, `BALBc-3_0`). This violates the task requirement that 'cell_id: Must match input cell identifiers exactly' and would cause evaluation failure.",
+      "all_quotes_exact": false,
+      "declared_step_has_evidence": false,
+      "semantic_status": "not_human_verified",
+      "warnings": [
+        "one_or_more_quotes_not_found_exactly",
+        "declared_error_step_has_no_matching_evidence"
+      ],
+      "reported_risk": "reset_index前后重新生成cell_id导致错位",
+      "establishes_solver_invalidity": false,
+      "protections": [
+        {
+          "stage": "stage2.construct_verify",
+          "check_id": "REG-IDS",
+          "enforcement": "task_specific_dynamic_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-TARGET-ATTEMPT",
+          "enforcement": "trajectory_evidence_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-EVIDENCE",
+          "enforcement": "trajectory_evidence_check"
+        }
+      ]
+    },
+    {
+      "run_id": "experiment-09a0b1446283ddc69ba2ea30--guided",
+      "issue_id": "experiment-09a0b1446283ddc69ba2ea30--guided:p001",
+      "step": "step 32",
+      "types": [
+        "F5"
+      ],
+      "problem": "Agent的Dataset类在处理稀疏矩阵索引时存在实现错误。代码中`__getitem__`方法尝试对稀疏矩阵进行索引操作`self.rna_data[idx].toarray().flatten()`，但由于scipy稀疏数组不支持`len()`操作，导致DataLoader在批处理时触发TypeError: 'sparse array length is ambiguous; use getnnz() or shape[0]'。Agent在step 33通过将稀疏矩阵预先转换为dense numpy数组修复了此问题。",
+      "all_quotes_exact": true,
+      "declared_step_has_evidence": true,
+      "semantic_status": "not_human_verified",
+      "warnings": [],
+      "reported_risk": "稀疏矩阵DataLoader索引/长度实现错误",
+      "establishes_solver_invalidity": false,
+      "protections": [
+        {
+          "stage": "stage2.construct_verify",
+          "check_id": "REG-SHAPE",
+          "enforcement": "task_specific_dynamic_check"
+        },
+        {
+          "stage": "stage2.construct_verify",
+          "check_id": "REG-API",
+          "enforcement": "task_specific_dynamic_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-TARGET-ATTEMPT",
+          "enforcement": "trajectory_evidence_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-EVIDENCE",
+          "enforcement": "trajectory_evidence_check"
+        }
+      ]
+    },
+    {
+      "run_id": "experiment-09a0b1446283ddc69ba2ea30--guided",
+      "issue_id": "experiment-09a0b1446283ddc69ba2ea30--guided:p002",
+      "step": "step 7-15, 25, 31, 53-59",
+      "types": [
+        "ENV"
+      ],
+      "problem": "由于网络访问限制，Agent无法下载任务要求的包含224个蛋白质的PBMC CITE-seq数据集（~161,764 cells）。Agent尝试了多个数据源：10x Genomics CDN（大部分返回403 Forbidden）、Zenodo（403 Forbidden，提示'unusual traffic from your network'）、GitHub releases（超时）、GEO/Figshare（403/404）、scvi-tools数据源（超时）。最终只能下载到一个较小的数据集pbmc_10k_protein_v3，仅包含17个蛋白质而非224个。这导致最终提交的predictions.h5ad形状为(787, 17)而非要求的(n_test, 224)，无法与评估器的ground truth匹配。",
+      "all_quotes_exact": false,
+      "declared_step_has_evidence": true,
+      "semantic_status": "not_human_verified",
+      "warnings": [
+        "one_or_more_quotes_not_found_exactly"
+      ],
+      "reported_risk": "224蛋白任务被17蛋白不同数据集替代",
+      "establishes_solver_invalidity": false,
+      "protections": [
+        {
+          "stage": "stage2.construct_verify",
+          "check_id": "REG-RESOURCE",
+          "enforcement": "task_specific_dynamic_check"
+        },
+        {
+          "stage": "stage2.construct_verify",
+          "check_id": "REG-DATASET",
+          "enforcement": "task_specific_evidence_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-NO-SUBSTITUTION",
+          "enforcement": "trajectory_evidence_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-TARGET-ATTEMPT",
+          "enforcement": "trajectory_evidence_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-EVIDENCE",
+          "enforcement": "trajectory_evidence_check"
+        }
+      ]
+    },
+    {
+      "run_id": "experiment-0d16c840d494fe9c4c563c9c--blind",
+      "issue_id": "experiment-0d16c840d494fe9c4c563c9c--blind:p001",
+      "step": "step 5",
+      "types": [
+        "ENV"
+      ],
+      "problem": "Zenodo returns HTTP 403 Forbidden for all download attempts (wget, curl, Python urllib, with various user agents and URL formats). The entire zenodo.org domain is blocked due to 'unusual traffic from your network.' This prevents the Agent from obtaining the required MGF training and test data, making it impossible to train a model or generate predictions. The Agent correctly identified this as an external blocking issue and documented it in diagnostic.md.",
+      "all_quotes_exact": true,
+      "declared_step_has_evidence": true,
+      "semantic_status": "not_human_verified",
+      "warnings": [],
+      "reported_risk": "Zenodo403导致必要MGF资源不可用",
+      "establishes_solver_invalidity": false,
+      "protections": [
+        {
+          "stage": "stage2.construct_verify",
+          "check_id": "REG-RESOURCE",
+          "enforcement": "task_specific_dynamic_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-TARGET-ATTEMPT",
+          "enforcement": "trajectory_evidence_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-EVIDENCE",
+          "enforcement": "trajectory_evidence_check"
+        }
+      ]
+    },
+    {
+      "run_id": "experiment-0d16c840d494fe9c4c563c9c--guided",
+      "issue_id": "experiment-0d16c840d494fe9c4c563c9c--guided:p001",
+      "step": "23",
+      "types": [
+        "F2"
+      ],
+      "problem": "Agent installed Casanovo via pip without checking dependency compatibility with the existing environment. The installation downgraded numpy from 2.3.5 to 1.26.4 and depthcharge from 0.5.0 to 0.4.10, breaking pyarrow and other packages that require numpy>=2.0. The installation output showed multiple warnings about incompatible numpy versions, but the Agent proceeded without addressing these conflicts. This created an unresolvable dependency conflict: when the Agent later upgraded numpy to 2.4.6 to fix pyarrow (step 26), it broke Casanovo which requires numpy<2.0. The Agent ended up with neither Casanovo nor the original depthcharge library working properly.",
+      "all_quotes_exact": false,
+      "declared_step_has_evidence": false,
+      "semantic_status": "not_human_verified",
+      "warnings": [
+        "one_or_more_quotes_not_found_exactly",
+        "declared_error_step_has_no_matching_evidence"
+      ],
+      "reported_risk": "Casanovo/NumPy/depthcharge依赖互相破坏",
+      "establishes_solver_invalidity": false,
+      "protections": [
+        {
+          "stage": "stage2.construct_verify",
+          "check_id": "REG-DEPENDENCY",
+          "enforcement": "task_specific_dynamic_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-TARGET-ATTEMPT",
+          "enforcement": "trajectory_evidence_check"
+        },
+        {
+          "stage": "stage3.run_verify",
+          "check_id": "REG-EVIDENCE",
+          "enforcement": "trajectory_evidence_check"
+        }
+      ]
+    }
+  ]
+}
