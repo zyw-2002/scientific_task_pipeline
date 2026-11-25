@@ -5,7 +5,7 @@ Review the package in `paths.output_dir` independently of the Stage 01 worker. R
 ## Review order
 
 1. Run `python /task/input/pipeline_tools/preflight.py --construction --generate-framework --review-report --paths /task/input/paths.json --package /workspace/verified --report /workspace/review_preflight.json`.
-2. Read only failed check IDs and concise reasons. Repair a path or evaluator mismatch in the draft when the scientific task remains valid. Re-run preflight, then run `python /task/input/pipeline_tools/scoring_smoke.py` and calibration. Do not rewrite generated files. If a key formal model, label, target, or checkpoint cannot be supplied or prepared, mark `BLOCKED`. Mark `REWORK` for a repairable contract/evaluator issue. Mark `PASS` only when all required checks and real metric controls pass.
+2. Read only failed check IDs and concise reasons. Repair a path or evaluator mismatch in the draft when the scientific task remains valid. Re-run preflight, then run `python /task/input/pipeline_tools/scoring_smoke.py` and calibration. Do not rewrite generated files. If a key formal model, label, target, or checkpoint has no authorized source or runnable validation recipe, mark `BLOCKED`. A declared runtime download/preprovided resource with an independent validation recipe remains `PASS` for construction and `execution_ready=false` until Stage3 preparation. Mark `REWORK` for a repairable contract/evaluator issue. Mark `PASS` only when all required checks and real metric controls pass.
 3. Write `review_report.json` with status, canonical/task IDs, paper scope, experiment/resource/requirement bindings, all check results, smoke/calibration evidence, and explicit reasons for REWORK/BLOCKED. Preserve source hashes and line citations.
 
 ## Mandatory gates
