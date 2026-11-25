@@ -193,11 +193,23 @@ def add_preflight(selection: Mapping[str, Any]) -> dict[str, Any]:
     return result
 
 
-def score_summary(rows: Iterable[Mapping[str, Any]], *, target: float = 90.0) -> dict[str, Any]:
-    """Summarize existing rubric outputs without converting missing scores to zero."""
+def score_summary(rows: Iterable[Mapping[str, Any]], *, target: float = 90.0,
+                  score_kind: str = "scientific") -> dict[str, Any]:
+    """Summarize one rubric namespace without converting missing scores to zero.
+
+    ``scientific`` is the Stage3 outcome namespace.  ``task_quality`` is the
+    preserved q0/NatureBench-style construction rubric.  They are intentionally
+    selected explicitly so a high task-quality score cannot masquerade as a
+    scientific run score.
+    """
+    if score_kind not in {"scientific", "task_quality"}:
+        raise ValueError("score_kind must be scientific or task_quality")
     records = []
     for row in rows:
-        score = row.get("scientific_score", row.get("rubric_score", row.get("score")))
+        if score_kind == "scientific":
+            score = row.get("scientific_score")
+        else:
+            score = row.get("q0", row.get("quality_score"))
         if isinstance(score, Mapping):
             score = score.get("total", score.get("score", score.get("value")))
         try:
@@ -210,12 +222,14 @@ def score_summary(rows: Iterable[Mapping[str, Any]], *, target: float = 90.0) ->
             valid = row.get("validity_status") in {"valid", "pass"}
         scoreable = score is not None and valid is not False and status not in {"blocked", "data_unavailable", "partial"}
         records.append({"task_id": row.get("task_id") or row.get("sample_id"), "score": score,
+                        "score_kind": score_kind,
                         "scoreable": scoreable, "status": status or None,
                         "failure_reason": row.get("failure_reason") or row.get("readiness_reason")})
     scored = [r["score"] for r in records if r["scoreable"]]
     total = len(records)
     return {
         "schema_version": "pipeline-iteration-score-summary-v1",
+        "score_kind": score_kind,
         "target": target,
         "tasks_total": total,
         "tasks_scoreable": len(scored),
@@ -243,6 +257,7 @@ def main(argv: list[str] | None = None) -> int:
     score.add_argument("--results", type=Path, required=True, help="JSONL or JSON array of task results")
     score.add_argument("--output", type=Path, required=True)
     score.add_argument("--target", type=float, default=90.0)
+    score.add_argument("--score-kind", choices=("scientific", "task_quality"), default="scientific")
     args = parser.parse_args(argv)
     if args.command == "select":
         result = select_tasks(args.pool, seed=args.seed, count=args.count,
@@ -250,7 +265,7 @@ def main(argv: list[str] | None = None) -> int:
     elif args.command == "preflight":
         result = add_preflight(json.loads(args.selection.read_text(encoding="utf-8")))
     else:
-        result = score_summary(_read_rows(args.results), target=args.target)
+        result = score_summary(_read_rows(args.results), target=args.target, score_kind=args.score_kind)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(json.dumps({"status": "written", "output": str(args.output.resolve())}, ensure_ascii=False))

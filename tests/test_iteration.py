@@ -24,11 +24,17 @@ class IterationControlTests(unittest.TestCase):
         self.assertEqual(result["preflight"]["blocked"], 1)
 
     def test_score_summary_does_not_turn_unavailable_into_zero(self):
-        result = score_summary([{"task_id": "S001", "score": 100, "is_valid": True, "status": "complete"},
+        result = score_summary([{"task_id": "S001", "scientific_score": 100, "is_valid": True, "status": "complete"},
                                 {"task_id": "S002", "status": "data_unavailable"}])
         self.assertEqual(result["tasks_scoreable"], 1)
         self.assertEqual(result["mean_score_scoreable"], 100)
         self.assertFalse(result["passed"])
+
+    def test_quality_and_scientific_namespaces_cannot_be_mixed(self):
+        quality = score_summary([{"sample_id": "S001", "q0": 100}], score_kind="task_quality")
+        scientific = score_summary([{"sample_id": "S001", "q0": 100}], score_kind="scientific")
+        self.assertEqual(quality["mean_score_scoreable"], 100)
+        self.assertEqual(scientific["tasks_scoreable"], 0)
 
 
 if __name__ == "__main__":

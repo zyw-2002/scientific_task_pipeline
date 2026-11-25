@@ -11,3 +11,5 @@ Validation evidence:
 - Current Stage3 `prepare` succeeded for S032, S067, and S086 from existing verified packages; their dry-run workflows completed and froze effective inputs/manifests without calling an external model.
 - S002 was rejected by the current Stage3 preparation boundary as `REWORK`, which is retained as a package-contract result rather than converted into a score.
 - A real external Solver attempt was not executed because the environment approval layer rejected sending the selected task package and authenticated interaction to the configured external LLM endpoint/proxy. No score is claimed from that attempt.
+
+The local historical q0/task-quality rubric for these same ten IDs is 98.0/100 (10 of 10 scored). The separate scientific namespace has 0 of 10 scores and therefore fails the scientific 90-point gate. The two reports are intentionally kept separate so q0 cannot be mistaken for scientific performance.
