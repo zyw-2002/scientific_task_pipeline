@@ -94,6 +94,10 @@ def run_workflow(*, output: Path, package: Path | None = None, pair: Path | None
         raise ValueError('imported verdict and API judge cannot both be selected')
     if (judge_endpoint is None) != (judge_model is None):
         raise ValueError('judge_endpoint and judge_model must be supplied together')
+    # Keep long-running Qwen defaults in the pipeline configuration, while
+    # allowing a caller to override them for another agent.
+    if not agent_kwargs:
+        agent_kwargs = setting('agent_kwargs')
     agent_kwargs = core.validate_agent_kwargs(agent, agent_kwargs, harbor_adapter=command is None)
     core.validate_model_endpoint(solver_base_url, 'solver base URL')
     core.validate_model_endpoint(judge_endpoint, 'judge endpoint')

@@ -15,6 +15,13 @@ DEFAULTS = {
     'judge_temperature': 0.0, 'judge_max_output_tokens': 12_000,
     'api_key_env': 'OPENAI_API_KEY', 'model_env_file': '', 'model_base_url': '',
     'attempt_policy': 'latest-scored',
+    'agent_kwargs': {
+        'skip_loop_detection': True,
+        'max_tool_calls_per_turn': 2000,
+        'shell_timeout_ms': 600000,
+        'shell_heartbeat_interval_ms': 60000,
+        'long_running_tasks': True,
+    },
     'prompt03': str(PROJECT_ROOT / 'prompts/stage3/03_solver_instruction.md'),
     'prompt04': str(PROJECT_ROOT / 'prompts/stage3/04_run_verify.md'),
 }

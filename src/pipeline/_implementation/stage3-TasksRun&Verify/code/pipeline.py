@@ -392,7 +392,7 @@ def run_variant(*, pair: Path, variant: str, output: Path, model: str = '',
         argv = harbor_command(package=package, jobs_dir=jobs, job_name=spec['task_id'] + '--' + variant,
                               agent=agent, model=model, harbor=harbor, gateway_spec=spec if gateway else None,
                               agent_kwargs=agent_kwargs, solver_base_url=solver_base_url,
-                              time_limit_sec=time_limit_sec, build_timeout_sec=build_timeout_sec)
+                              env_file=env_file, time_limit_sec=time_limit_sec, build_timeout_sec=build_timeout_sec)
         backend = 'harbor_docker'
     network = network_for_policy(spec['runtime'].get('network'), spec['runtime']['network_policy'],
                                  proxy_url=solver_proxy_url)

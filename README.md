@@ -33,3 +33,19 @@ PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py' -v
 ```
 
 The tests cover historical Stage1 field presence, Stage2 construct/verify Harbor result manifests, Stage3 Solver input/output binding, and prompt path boundaries. Real Harbor execution remains an explicit integration run configured through `config/stage2-worker.json.example`; it is not required for the deterministic test suite.
+
+## Ten-task iteration protocol
+
+`bin/benchmark_iteration` implements the development loop for the fixed 100-task OriginBench seed pool. Every iteration samples exactly ten task IDs uniformly without replacement from the complete pool, using a recorded seed and pool hash:
+
+```bash
+./bin/benchmark_iteration select --pool /path/to/selected100.jsonl \
+  --output runs/iterations/iteration-001/selection.json --seed 20261125
+./bin/benchmark_iteration preflight \
+  --selection runs/iterations/iteration-001/selection.json \
+  --output runs/iterations/iteration-001/preflight.json
+```
+
+Preflight runs after selection and records `ready`, `downloadable`, `partial`, or `blocked`. An empty data directory never becomes a scientific fixture by default. Public downloads and package-specific installation are allowed only when declared by that task; unrelated fallback datasets, synthetic replacements, and self-reported scores are not accepted. Missing material remains unscored (`null`) with its evidence and error recorded.
+
+The preserved rubric is summarized with `benchmark_iteration score`. A batch passes only when all ten tasks have valid rubric scores and the mean is at least 90; the report also includes scoreable coverage and blocked/unscored counts. Existing baseline and candidate results must be compared on the same selected task IDs before merging a pipeline revision.
