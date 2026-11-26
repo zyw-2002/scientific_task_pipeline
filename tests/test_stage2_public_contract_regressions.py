@@ -61,16 +61,22 @@ class PublicContractRegressionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp); evaluation = root/'common_task/evaluation'; evaluation.mkdir(parents=True)
             fixture = evaluation/'fixtures'; fixture.mkdir(); (fixture/'good.csv').write_text('id,value\n1,2\n')
-            (evaluation/'protocol.json').write_text('{}')
+            (evaluation/'protocol.json').write_text(json.dumps({
+                'units': [{'id': 'first', 'metric': 'raw_error'}, {'id': 'second', 'metric': 'raw_accuracy'}],
+                'aggregations': [{'output': 'accuracy', 'metric': 'raw_accuracy', 'operation': 'mean'},
+                                 {'output': 'error', 'metric': 'raw_error', 'operation': 'mean'}]}))
             smoke = {'schema_version': 'pipeline-scoring-smoke-v1',
                      'cases': [{'id': 'good', 'kind': 'correct',
                                 'submission': {'path': 'fixtures/good.csv'},
-                                'expected_metrics': {'accuracy': 0.9}}]}
+                                'expected_metrics': {'accuracy': 0.9, 'error': 0.02}}]}
             path = evaluation/'scoring_smoke.json'; path.write_text(json.dumps(smoke))
             generator._normalize_scoring_smoke_config(root, {})
             case = json.loads(path.read_text())['cases'][0]
             self.assertEqual(case['submission'], 'fixtures/good.csv')
             self.assertEqual(case['expected_metrics'], smoke['cases'][0]['expected_metrics'])
+            generator._normalize_scoring_smoke_config(root, {})
+            self.assertEqual(json.loads(path.read_text())['cases'][0]['expected_metrics'],
+                             smoke['cases'][0]['expected_metrics'])
 
     def test_review_template_never_invents_acceptance_or_overwrites_findings(self):
         report_module = load_file(STAGE2_ROOT/'code/review_report.py', '_review_template_regression', stage=2)

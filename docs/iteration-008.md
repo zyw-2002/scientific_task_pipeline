@@ -94,3 +94,17 @@ truncation; step counts and full original hashes are audited. Exact span
 references still resolve against the original trajectory. This targets an
 observed HTTP 400 on a long historical trace while preserving evidence.
 All 46 tests pass.
+
+A host/worker smoke discrepancy in Iteration 007 exposed a deterministic
+framework defect. The framework copied the first independently authored
+expected value onto every raw unit metric, even though smoke receipts expose
+aggregation outputs. For example, a correct receipt with `mean_migration_f1`
+and `mean_parsimony_ratio` was rejected after the framework added unreturned
+`migration_f1`/`parsimony_ratio` expectations; the latter could also inherit an
+unrelated scientific value. This inference is removed. Vocabulary/path
+normalization preserves all authored expected metrics exactly, including
+different units and values, across repeated normalization. Existing failed
+packages and evidence remain unchanged. Regression and full suite: 46 pass.
+This candidate fix precedes Iteration 008 worker snapshots; Iteration 007
+continues with its frozen program. It does not reinterpret runtime errors as
+valid rejections or remove any independent correctness controls.

@@ -410,10 +410,8 @@ def _normalize_scoring_smoke_config(package, spec):
     config.setdefault('weak_valid_applicability', {
         'applicable': True,
         'reason': 'The weak-valid control is a structurally valid submission with a deliberately lower score.'})
-    units = []
     try:
         protocol = json.loads((evaluation / str(config['protocol'])).read_text(encoding='utf-8'))
-        units = [u for u in protocol.get('units', []) if isinstance(u, dict) and isinstance(u.get('metric'), str)]
         requirements = [r for r in protocol.get('assessment', {}).get('requirements', [])
                         if isinstance(r, dict) and isinstance(r.get('id'), str)]
     except (OSError, ValueError, TypeError):
@@ -476,13 +474,9 @@ def _normalize_scoring_smoke_config(package, spec):
                 and isinstance(case['reward_bounds']['reward'], dict)):
             case['reward_bounds'] = case['reward_bounds']['reward']
             changed.append(f'scoring smoke case {case.get("id", "unknown")} reward bounds flattened')
-        metrics = case.get('expected_metrics')
-        if isinstance(metrics, dict) and units:
-            values = [v for v in metrics.values() if isinstance(v, (int, float)) and not isinstance(v, bool)]
-            if values:
-                value = values[0]
-                for unit in units:
-                    case['expected_metrics'].setdefault(unit['metric'], value)
+        # Expected values are independent scientific controls. Unit metrics
+        # and aggregation outputs have distinct namespaces and may differ in
+        # both values and units; vocabulary repair must never invent either.
         changed.append(f'scoring smoke case {case.get("id", "unknown")} vocabulary normalized')
     atomic_write_json(path, config)
     return changed
