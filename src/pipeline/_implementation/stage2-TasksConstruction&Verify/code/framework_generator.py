@@ -344,7 +344,7 @@ def _normalize_public_support_files(package, spec):
             (not target.is_file() or not target.read_text(encoding='utf-8').strip()) and isinstance(sources, list)):
         rows = []
         for source in sources:
-            if not isinstance(source, dict):
+            if not isinstance(source, dict) or source.get('visibility', 'public') != 'public':
                 continue
             rows.append({key: source[key] for key in ('id', 'name', 'package_path', 'availability',
                                                        'identity', 'version', 'schema_description', 'acquisition')

@@ -14,6 +14,23 @@ from pipeline.stage2_construction.validation.instruction import (
 
 
 class PublicContractRegressionTests(unittest.TestCase):
+    def test_generated_public_manifest_omits_private_resource_metadata(self):
+        generator = load_file(STAGE2_ROOT/'code/framework_generator.py', '_public_manifest_generator', stage=2)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            spec = {'data': {'mode': 'referenced', 'sources': [
+                {'id': 'public_input', 'name': 'input.json', 'visibility': 'public'},
+                {'id': 'hidden_reference', 'visibility': 'private',
+                 'package_path': 'common_task/evaluation/reference.json',
+                 'identity': 'PRIVATE_SOURCE_REFERENCE'},
+                {'id': 'private_fixture', 'visibility': 'private', 'role': 'fixture'},
+            ]}}
+            generator._normalize_public_support_files(root, spec)
+            manifest = json.loads((root/'common_task/environment/input/data_sources.json').read_text())
+            self.assertEqual([r['id'] for r in manifest['sources']], ['public_input'])
+            self.assertNotIn('PRIVATE_SOURCE_REFERENCE', json.dumps(manifest))
+            self.assertEqual(len(spec['data']['sources']), 3)
+
     def test_private_collector_stays_out_of_public_contract(self):
         source = {'runtime': {'data_dir': '/task/problem/data'},
                   'submission': {'path': '/workspace/output/predictions.csv',

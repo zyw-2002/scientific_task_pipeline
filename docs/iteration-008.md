@@ -65,3 +65,17 @@ safe partial package was collected, and retry budget remains. Arbitrary trial
 exceptions, ambiguous artifacts and unsafe copies remain non-retryable. A
 failed worker never gains readiness; the recovered draft must undergo another
 construction attempt and all normal checks. All 44 tests pass.
+
+The generated public data_sources manifest now omits all explicitly nonpublic
+resources instead of publishing private reference/fixture metadata from the
+internal execution registry. Public resources remain described, and private
+resource declarations stay unchanged in the evaluator configuration. This
+addresses the public-manifest boundary seen in live construction diagnostics.
+All 45 tests pass.
+
+A real span-based final T-P scoring request for the first task in the corrected
+NatureBench random sample returned 33/40 with all eight criteria bound to exact
+trajectory quotes. Complete T0 remains unknown because historical native
+mechanical evidence is incomplete. The rest of the same sample is being
+reviewed with bounded request concurrency; the first task was not selected by
+its outcome or score.
