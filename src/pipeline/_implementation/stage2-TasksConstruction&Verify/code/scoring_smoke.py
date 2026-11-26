@@ -301,7 +301,10 @@ def inspect_config(path: Path, *, require_rejection_reasons=False, development_c
                                  f'remove {", ".join(score_fields)}')
         if not isinstance(case.get('description'), str) or not case['description'].strip():
             raise ValueError(f'{cid}: explain the scientific/structural control in description')
-        submission = _file(root, case.get('submission'))
+        if not isinstance(case.get('submission'), str) or not case['submission'].strip():
+            raise ValueError(f'{cid}: missing submission fixture path; create the actual control file '
+                             'and set submission to its path relative to scoring_smoke.json')
+        submission = _file(root, case['submission'])
         if kind != 'invalid':
             fixture_errors = _fixture_submission_errors(submission, formal, formal)
             if fixture_errors:

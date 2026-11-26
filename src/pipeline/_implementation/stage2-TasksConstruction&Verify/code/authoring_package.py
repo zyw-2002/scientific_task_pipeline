@@ -230,7 +230,14 @@ def initialize(paths: dict) -> dict:
         smoke = evaluation/'scoring_smoke.json'
         if not smoke.exists():
             atomic_write_json(smoke, {'schema_version': 'pipeline-scoring-smoke-v1', 'protocol': protocol_path.name,
-                                      'resource_bindings': {}, 'cases': []})
+                                      'resource_bindings': {}, 'cases': [
+                {'id': 'correct_control', 'kind': 'correct', 'expected_status': 'success',
+                 'description': '', 'submission': '', 'oracle': '', 'expected_metrics': {}, 'requirement_ids': []},
+                {'id': 'weak_valid_control', 'kind': 'weak_valid', 'expected_status': 'success',
+                 'description': '', 'submission': '', 'expected_metrics': {}, 'requirement_ids': []},
+                {'id': 'invalid_control', 'kind': 'invalid', 'expected_status': 'invalid_submission',
+                 'description': '', 'submission': '', 'expected_error_contains': '', 'requirement_ids': []},
+            ]})
         atomic_write_json(protocol_path, {'adapter': 'metric_adapter.py', 'context': {}, 'resource_bindings': {},
                                           'units': [], 'aggregations': [], 'reward_metric': '',
                                           'reward_direction': '', 'assessment': assessment})

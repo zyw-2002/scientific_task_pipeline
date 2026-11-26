@@ -54,3 +54,15 @@ generic method vocabulary. The general locator/result scanner now also covers
 states this boundary explicitly. Private source evidence remains private;
 existing task packages and historical scores are not rewritten. The candidate
 incorporates the preceding long-trajectory scoring revision; all 54 tests pass.
+
+The first actual Iteration 008 construction exports show seven to eleven
+source-quote helper calls in three trajectories, versus no helper use in some
+prior repair runs. Source grounding is being exercised, but those packages
+still fail other construction checks; no rubric improvement is inferred.
+Two exports omitted every smoke case's submission fixture, and the resulting
+generic path error obscured this root cause among generated-file failures.
+The next scaffold explicitly shows the three incomplete control objects,
+including their empty fixture paths and independently authored expectations.
+Missing fixture paths now receive a case-specific repair diagnostic. No
+fixture bytes, metric values, scientific verdict or passing control is supplied
+by this scaffold.
