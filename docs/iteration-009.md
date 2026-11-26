@@ -66,3 +66,11 @@ including their empty fixture paths and independently authored expectations.
 Missing fixture paths now receive a case-specific repair diagnostic. No
 fixture bytes, metric values, scientific verdict or passing control is supplied
 by this scaffold.
+
+The authorized endpoint exhausted its workspace quota during the preceding
+real run (`insufficient_quota`, followed by some HTTP 403 responses). This
+candidate remains prepared but unlaunched until the original endpoint is
+available again. Its ten frozen source bindings are present; no easier tasks
+were substituted. The candidate includes the preceding quota classification
+and iteration-identity reporting fixes. Final combined suite: 59 tests pass.
+No full Q/D/T score, scientific improvement or main-branch promotion is claimed.
