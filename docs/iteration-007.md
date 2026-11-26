@@ -48,3 +48,12 @@ CLIs. Q0=99.583 over nine results now reports 90% coverage and passed=false.
 A read-only NatureBench observation adapter also resolves actual public task
 packages, excludes administrative jobs and keeps missing documents explicit.
 These changes do not alter the ongoing frozen Stage2/Stage3 worker inputs.
+
+Trajectory reporting was subsequently corrected after inspection of actual
+NatureBench ATIF steps. Narrative keywords and planned calls no longer earn
+execution/validation/input/claim points. Real execution requires observed
+results linked to tool call IDs. F1--F8 process points require the current
+trajectory SHA-256, per-criterion rationale and exact quotes from named steps;
+unbound numeric scores are unknown. Weights remain T-E=60, T-P=40. Validation
+now has 38 passing tests. This reporting fix invalidates earlier keyword-based
+partial T0 observations; it is not a change to the fixed rubric.

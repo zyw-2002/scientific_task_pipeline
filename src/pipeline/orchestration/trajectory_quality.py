@@ -7,6 +7,8 @@ cross-benchmark comparisons cannot masquerade as a complete score.
 """
 from __future__ import annotations
 
+import hashlib
+import json
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -46,6 +48,51 @@ def _path(value: Any) -> Path | None:
 
 def _artifact(result: Mapping[str, Any], name: str) -> Path | None:
     return _path((result.get("artifacts") or {}).get(name))
+
+
+def _bound_semantic_scores(review: Mapping[str, Any], trajectory: Path | None) -> dict[str, float]:
+    """Require current-trajectory identity and exact step quotes for each score."""
+    if trajectory is None:
+        return {}
+    try:
+        raw = trajectory.read_bytes()
+        if review.get("trajectory_sha256") != hashlib.sha256(raw).hexdigest():
+            return {}
+        parsed = json.loads(raw)
+        steps = {str(row.get("step_id")): row for row in parsed.get("steps", []) if isinstance(row, Mapping)}
+    except (OSError, ValueError, TypeError, AttributeError):
+        return {}
+
+    def strings(value):
+        if isinstance(value, str):
+            yield value
+        elif isinstance(value, Mapping):
+            for item in value.values(): yield from strings(item)
+        elif isinstance(value, list):
+            for item in value: yield from strings(item)
+
+    accepted = {}
+    criteria = review.get("criteria", {})
+    if not isinstance(criteria, Mapping):
+        return accepted
+    for name in T_PROCESS_WEIGHTS:
+        row = criteria.get(name)
+        if not isinstance(row, Mapping): continue
+        score, evidence = row.get("score"), row.get("evidence")
+        if type(score) not in (int, float) or not 1 <= score <= 5 or not row.get("reason"):
+            continue
+        if not isinstance(evidence, list) or not evidence:
+            continue
+        exact = True
+        for ref in evidence:
+            if not isinstance(ref, Mapping): exact = False; break
+            step = steps.get(str(ref.get("step_id")))
+            quote = ref.get("quote")
+            if (step is None or not isinstance(quote, str) or len(quote.strip()) < 10
+                    or not any(quote in text for text in strings(step))):
+                exact = False; break
+        if exact: accepted[name] = float(score)
+    return accepted
 
 
 def score_trajectory(result: Mapping[str, Any]) -> dict[str, Any]:
@@ -124,12 +171,12 @@ def score_trajectory(result: Mapping[str, Any]) -> dict[str, Any]:
     # each criterion to trajectory evidence.  Issue counts alone cannot imply
     # a score, and absent observations remain unknown.
     semantic = result.get("semantic_review") if isinstance(result.get("semantic_review"), Mapping) else {}
-    semantic_scores = semantic.get("scores") if isinstance(semantic.get("scores"), Mapping) else {}
+    semantic_scores = _bound_semantic_scores(semantic, artifacts["trajectory"])
     for name, maximum in T_PROCESS_WEIGHTS.items():
         value = semantic_scores.get(name)
         valid = isinstance(value, (int, float)) and 1 <= value <= 5
         add(name, float(value) if valid else None, maximum,
-            [f"semantic_review.scores.{name}"] if valid else [],
+            [f"semantic_review.criteria.{name}: exact step quotes and trajectory SHA-256"] if valid else [],
             None if valid else f"semantic process dimension {name} has no bound score",
             status=("observed" if valid else "unknown"))
 
@@ -215,36 +262,27 @@ def score_atif_trajectory(trajectory: Mapping[str, Any], outcome: Mapping[str, A
     steps = steps if isinstance(steps, list) else []
     agent_steps = [s for s in steps if isinstance(s, Mapping) and s.get("source", s.get("role")) in {"agent", "assistant"}]
     calls = [c for s in agent_steps for c in (s.get("tool_calls") or []) if isinstance(c, Mapping)]
-    text = "\n".join(str(s.get("message", "")) + "\n" + str(s.get("observation", "")) for s in agent_steps).lower()
-    tool_text = " ".join(str(c.get("arguments", "")) for c in calls).lower()
-    errors_observed = any(token in text for token in ("traceback", "error", "failed", "exception"))
-    later_progress = errors_observed and any(token in text for token in ("retry", "fix", "re-run", "rerun", "validated", "success"))
-    output_claim = any(token in text for token in ("submit", "completed", "final", "saved", "ready"))
-    validation = any(token in text + tool_text for token in ("validate", "evaluation", "evaluator", "test", "checksum", "sha256", "metric"))
-    input_read = any(token in text + tool_text for token in ("read", "load", "open", "ls", "find", "cat", "data"))
-    dimensions = {
-        "formal_input_use": {"score": T_EVIDENCE_WEIGHTS["formal_input_use"] if input_read else None,
-                             "max": T_EVIDENCE_WEIGHTS["formal_input_use"],
-                             "evidence": ["input/read activity"] if input_read else [],
-                             "status": "observed" if input_read else "unknown"},
-        "data_integrity": {"score": None, "max": T_EVIDENCE_WEIGHTS["data_integrity"],
-                           "evidence": [], "status": "unknown"},
-        "contract_adherence": {"score": None, "max": T_EVIDENCE_WEIGHTS["contract_adherence"], "evidence": [], "status": "unknown"},
-        "real_execution": {"score": T_EVIDENCE_WEIGHTS["real_execution"] if agent_steps else 0.0,
-                            "max": T_EVIDENCE_WEIGHTS["real_execution"],
-                            "evidence": [f"{len(agent_steps)} agent steps", f"{len(calls)} tool calls"] if agent_steps else [],
-                            "status": "observed"},
-        "validation_and_recovery": {"score": T_EVIDENCE_WEIGHTS["validation_and_recovery"] if validation else None,
-                                    "max": T_EVIDENCE_WEIGHTS["validation_and_recovery"],
-                                    "evidence": (["validation activity"] if validation else []) + (["recovery"] if later_progress else []),
-                                    "status": "observed" if validation else "unknown"},
-        "claim_support": {"score": T_EVIDENCE_WEIGHTS["claim_support"] if output_claim and (validation or outcome) else None,
-                          "max": T_EVIDENCE_WEIGHTS["claim_support"],
-                          "evidence": (["completion/output claim"] if output_claim else []),
-                          "status": "observed" if output_claim and (validation or outcome) else "unknown"},
-    }
-    for name, maximum in T_PROCESS_WEIGHTS.items():
-        dimensions[name] = {"score": None, "max": maximum, "evidence": [], "status": "unknown"}
+    # Tool intent and words such as "read", "test" or "completed" are not
+    # proof of execution, input identity, validation or supported completion.
+    # Only observations linked to actual call IDs establish this limited
+    # structural adapter's real-execution dimension.
+    matched = []
+    for step in agent_steps:
+        ids = {c.get("tool_call_id") for c in step.get("tool_calls", [])
+               if isinstance(c, Mapping) and c.get("tool_call_id")}
+        observation = step.get("observation")
+        results = observation.get("results", []) if isinstance(observation, Mapping) else []
+        matched.extend(r for r in results if isinstance(r, Mapping)
+                       and r.get("source_call_id") in ids and r.get("content"))
+    executed = bool(matched)
+    dimensions = {name: {"score": None, "max": maximum, "evidence": [], "status": "unknown"}
+                  for name, maximum in T0_WEIGHTS.items()}
+    if executed:
+        dimensions["real_execution"] = {
+            "score": T_EVIDENCE_WEIGHTS["real_execution"],
+            "max": T_EVIDENCE_WEIGHTS["real_execution"],
+            "evidence": [f"{len(matched)} observations linked to actual tool call IDs"],
+            "status": "observed"}
     observed = [x for x in dimensions.values() if x["status"] == "observed" and x["score"] is not None]
     observed_score = sum(x["score"] for x in observed)
     observed_max = sum(x["max"] for x in observed)
@@ -258,5 +296,5 @@ def score_atif_trajectory(trajectory: Mapping[str, Any], outcome: Mapping[str, A
             "unknown_dimensions": [k for k, v in dimensions.items() if v.get("status") == "unknown"],
             "dimensions": dimensions,
             "evidence_count": sum(bool(x["evidence"]) for x in dimensions.values()),
-            "policy": "structural cross-benchmark audit; unknown task-contract dimensions are not failures"}
+            "policy": "structural audit of linked tool observations only; input identity, validation and completion claims require independent evidence"}
 

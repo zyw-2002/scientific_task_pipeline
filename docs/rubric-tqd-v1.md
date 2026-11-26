@@ -98,3 +98,12 @@ locators stay private.
 Pipeline changes are selected for generality across a fresh random ten-task
 sample. A lower score on one case is a diagnostic signal; it is not grounds
 for editing that case specifically.
+
+Implementation evidence requirements: an external ATIF adapter's activity
+keywords are diagnostics only. T4 needs tool observations linked to call IDs;
+the remaining T-E dimensions need their independent native contract/evidence.
+For T-P, each `semantic_review.criteria` entry contains `score`, `reason` and
+`evidence` records (`step_id`, exact `quote`), and the review binds the current
+trajectory with `trajectory_sha256`. Numeric scores without this binding are
+unknown. This tightens evidence validation while preserving all dimensions
+and weights above.

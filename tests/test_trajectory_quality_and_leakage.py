@@ -1,4 +1,7 @@
 import unittest
+import hashlib
+import json
+import tempfile
 from pathlib import Path
 
 from pipeline.orchestration.trajectory_quality import (T0_WEIGHTS, score_trajectory,
@@ -6,6 +9,33 @@ from pipeline.orchestration.trajectory_quality import (T0_WEIGHTS, score_traject
 
 
 class TrajectoryQualityTests(unittest.TestCase):
+    def test_planning_or_completion_words_are_not_execution_evidence(self):
+        report = score_atif_trajectory({'steps': [{'source': 'agent',
+            'message': 'Read the data, test the results, all completed and validated.'}]})
+        self.assertEqual(report['observed_score'], 0)
+        self.assertIn('real_execution', report['unknown_dimensions'])
+        actual = score_atif_trajectory({'steps': [{'source': 'agent',
+            'tool_calls': [{'tool_call_id': 'read1', 'function_name': 'Read'}],
+            'observation': {'results': [{'source_call_id': 'read1', 'content': 'actual file contents'}]}}]})
+        self.assertEqual(actual['observed_score'], 12)
+        self.assertIn('formal_input_use', actual['unknown_dimensions'])
+
+    def test_semantic_scores_require_current_trajectory_and_exact_quotes(self):
+        criterion = 'strategy_choice'
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp)/'trajectory.json'
+            path.write_text(json.dumps({'steps': [{'step_id': 2, 'source': 'agent',
+                'message': 'I will verify the split before training the model.'}]}))
+            row = {'artifacts': {'trajectory': str(path)}, 'semantic_review': {
+                'scores': {criterion: 5}}}
+            self.assertIsNone(score_trajectory(row)['dimensions'][criterion]['score'])
+            row['semantic_review'] = {'trajectory_sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
+                'criteria': {criterion: {'score': 5, 'reason': 'Checks the split before fitting',
+                    'evidence': [{'step_id': 2, 'quote': 'verify the split before training'}]}}}
+            self.assertEqual(score_trajectory(row)['dimensions'][criterion]['score'], 5)
+            path.write_text('{"steps": []}')
+            self.assertIsNone(score_trajectory(row)['dimensions'][criterion]['score'])
+
     def test_tqd_v1_trajectory_weights_are_fixed(self):
         self.assertEqual(sum(T0_WEIGHTS.values()), 100.0)
         self.assertEqual(len(T0_WEIGHTS), 14)

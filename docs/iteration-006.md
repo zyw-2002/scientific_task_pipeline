@@ -67,3 +67,19 @@ ten-task sample (seed 20261126), resolved via trial config to the dataset
 package, includes all required public documents and excludes private scoring
 code. Results are saved under `nature-public-v2`; earlier NatureBench numbers
 (including the attempted network-error completion) are not valid baselines.
+
+Corrected NatureBench public-view results: Q0=99.500 and D0=71.125, 10/10
+scored with two repeats each (4 review-required). This is a different, valid
+scientific-task sample and supersedes the contaminated earlier observation.
+ScientistWorld's previously observed Q0=96.625/D0=67.938 remains query-only;
+it has no new Solver trajectories. These observations do not establish a
+causal improvement in our pipeline.
+
+A scoring implementation audit also invalidated the former keyword-based
+T0 observed_score=39 shortcut: planning/completion words cannot prove input
+use, execution, validation or supported claims. The corrected external ATIF
+adapter awards only linked call/observation execution evidence. Nine of ten
+NatureBench trajectory files parse and establish that one 12-point dimension
+(12% dimensional coverage); one trajectory is malformed JSON and is unknown.
+All ten complete T0 values remain null. These partial observations are not
+normalized to 100 or presented as full trajectory-quality scores.
