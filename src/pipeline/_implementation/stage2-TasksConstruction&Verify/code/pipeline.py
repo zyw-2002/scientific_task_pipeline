@@ -30,6 +30,17 @@ DEFAULT_ISSUES = STAGE.parent / 'analysis_tractory/v1/latest/judge/issues.jsonl'
 _FROZEN_PROGRAM_SHA256 = None
 
 
+def resource_preparation_retry(report: dict, construct_attempt: int, limit: int) -> bool:
+    """Give missing-resource designs one bounded preparation repair opportunity.
+
+    Local blob availability cannot establish whether an authorized download or
+    a synchronized operator mount can be declared and independently validated.
+    This permits another authoring attempt, never construction acceptance.
+    """
+    return (report.get('contract_status') == 'BLOCKED' and construct_attempt == 0
+            and bool(report.get('missing_resources')) and (limit == 0 or limit > 1))
+
+
 def _default_prompt(role: str) -> Path:
     """Use the current fast prompt, with a read-only snapshot compatibility fallback."""
     name = '01_construct_fast.md' if role == 'construct' else '02_construct_verify_fast.md'
@@ -838,20 +849,16 @@ def workflow(args) -> dict:
             draft = collect_build(build_task, workspace / 'build', target, report_path=construction_feedback)
             report = read_json(construction_feedback)
             triage = report.get('contract_status', 'PASS' if report['static_pass'] else 'REWORK')
-            retry_missing_resources = False
-            if (triage == 'BLOCKED' and construct_attempt == 0 and report.get('missing_resources')
-                    and (not args.max_construct_attempts or args.max_construct_attempts > 1)):
-                inventory = build_task / 'environment/input/source_inventory.json'
-                candidates = read_json(inventory)['files'] if inventory.is_file() else []
-                retry_missing_resources = any(
-                    set(row['kind']) & {'code', 'data', 'dataset', 'supplementary', 'construction_resource_catalog'}
-                    and row['bytes'] > 0 for row in candidates)
-                if retry_missing_resources:
-                    report['repair_resource_evidence'] = ('Inspect source_inventory.json, then inspect the actual selected archive '
-                        'members and source code. Supply the required resources or bind a verifiable preparation. '
-                        'Check whether an alleged reference is actually required by the scientific metric. '
-                        'Keep BLOCKED if the essential resource cannot be supplied.')
-                    atomic_json(construction_feedback, report)
+            retry_missing_resources = resource_preparation_retry(report, construct_attempt, args.max_construct_attempts)
+            if retry_missing_resources:
+                report['repair_resource_evidence'] = (
+                    'Inspect the source inventory and paper resource statements. Missing local bytes do not imply '
+                    'that acquisition is impossible. Repair invalid preparation declarations, identify an authorized '
+                    'download or operator mount, and bind a runnable preparation plus independent content validation. '
+                    'Keep source locators private and use representative fixtures only for authoring controls. '
+                    'Do not invent data, references or checkpoints, substitute another task, or claim formal execution. '
+                    'Keep BLOCKED if no lawful, verifiable preparation path can be established.')
+                atomic_json(construction_feedback, report)
             state['stages'].append({'stage': '01_construct', 'attempt': construct_attempt,
                                     'package': str(draft), 'checks': str(construction_feedback),
                                     'checks_sha256': file_sha256(construction_feedback),

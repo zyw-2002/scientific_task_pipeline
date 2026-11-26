@@ -119,3 +119,7 @@ Before the final preflight, mechanically confirm that every binding resolves, ev
 Compatibility path for frozen role snapshots is `/task/input/fixed_task_instruction.md`. The construction tool invocation is also available as `python /task/input/pipeline_tools/preflight.py` followed by the required flags above.
 
 python /task/input/pipeline_tools/preflight.py
+
+## Method requirements and actual execution evidence
+
+Determine from the source and scientific objective whether the task allows any compliant method or explicitly requires an algorithmic capability/process. State that distinction publicly in method-neutral terms when unrestricted. Do not require an existing package when the method can be implemented independently. When implementation, training, simulation or another scientific process is mandatory, bind that requirement to assessment and to code/trajectory/experiment-log evidence reviewed at Stage3. A final numeric output alone cannot demonstrate a required scientific process. Keep numerical accuracy and process compliance distinct; do not infer the method from a submitted method-name string or a package import. Do not turn optional paper techniques into mandatory restrictions.

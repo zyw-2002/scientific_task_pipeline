@@ -83,7 +83,7 @@ Produce results through real, authorized computation on the specified task input
 - Replace specified experiment inputs with unrelated or unauthorized real or synthetic data.
 - Hard-code answers, submit empty files or present placeholder outputs as completed results.
 
-Legitimate simple methods, weak baselines, analytical calculations, and methods without training are allowed. Constant, all-zero, single-class, or identity outputs must be assessed against the task and their actual generation process; a low score alone does not make a submission invalid. Record accidentally exposed answers or task configuration faults without exploiting them to generate answers.
+When the task permits method choice, legitimate simple methods, weak baselines, analytical calculations and methods without training are allowed. If the public objective explicitly requires implementing or training a scientific method, perform that process and preserve its code, configuration and execution evidence; matching final numbers with a different process does not satisfy that requirement. Implement independently when permitted rather than assuming a particular package is mandatory. Constant, all-zero, single-class, or identity outputs must be assessed against the task and their actual generation process; a low score alone does not make a submission invalid. Record accidentally exposed answers or task configuration faults without exploiting them to generate answers.
 
 ## 8. Final delivery
 
