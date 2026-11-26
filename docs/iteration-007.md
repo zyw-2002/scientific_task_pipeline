@@ -39,3 +39,12 @@ record source bindings, frozen program snapshots, authoring trajectories,
 preflight, independent review, accepted Stage3 executions and rubric coverage.
 The candidate stays on its branch until comparable complete evidence supports
 promotion; no high query-only score is treated as runtime success.
+
+Additional reporting fixes on the candidate branch prevent a short list of high
+scores from passing a ten-task iteration: the summaries require ten unique IDs,
+optionally bind them to frozen selection.json, reject nonfinite/out-of-range
+scores and partial T0 coverage, and expose D0/trajectory consistently in both
+CLIs. Q0=99.583 over nine results now reports 90% coverage and passed=false.
+A read-only NatureBench observation adapter also resolves actual public task
+packages, excludes administrative jobs and keeps missing documents explicit.
+These changes do not alter the ongoing frozen Stage2/Stage3 worker inputs.

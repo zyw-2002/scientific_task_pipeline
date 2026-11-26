@@ -51,6 +51,31 @@ class IterationControlTests(unittest.TestCase):
         self.assertEqual(quality["mean_score_scoreable"], 100)
         self.assertEqual(scientific["tasks_scoreable"], 0)
 
+    def test_nine_high_scores_cannot_pass_a_ten_task_iteration(self):
+        rows = [{"task_id": f"S{i:03d}", "q0": 100} for i in range(10)]
+        self.assertTrue(score_summary(rows, score_kind="task_quality")["passed"])
+        partial = score_summary(rows[:9], score_kind="task_quality")
+        self.assertEqual(partial["mean_score_scoreable"], 100)
+        self.assertFalse(partial["passed"])
+        self.assertEqual(partial["coverage"], 0.9)
+        self.assertEqual(partial["tasks_blocked_or_unscored"], 1)
+
+    def test_replaced_or_duplicated_tasks_cannot_pass(self):
+        selected = [f"S{i:03d}" for i in range(10)]
+        rows = [{"task_id": tid, "d0": 95} for tid in selected]
+        self.assertTrue(score_summary(rows, score_kind="difficulty", expected_task_ids=selected)["passed"])
+        rows[-1]["task_id"] = "replacement"
+        self.assertFalse(score_summary(rows, score_kind="difficulty", expected_task_ids=selected)["passed"])
+        rows[-1]["task_id"] = selected[0]
+        self.assertFalse(score_summary(rows, score_kind="difficulty")["passed"])
+
+    def test_invalid_scores_and_partial_trajectory_do_not_pass(self):
+        for value in (float('nan'), float('inf'), 101, -1, True):
+            result = score_summary([{"task_id": "S001", "q0": value}], score_kind="task_quality")
+            self.assertEqual(result["tasks_scoreable"], 0)
+        rows = [{"task_id": f"S{i:03d}", "t0": {"score": 100, "coverage": 0.4}} for i in range(10)]
+        self.assertFalse(score_summary(rows, score_kind="trajectory")["passed"])
+
     def test_main_dispatcher_writes_selection_and_preflight(self):
         root = Path(__file__).resolve().parents[1]
         with tempfile.TemporaryDirectory() as temp:

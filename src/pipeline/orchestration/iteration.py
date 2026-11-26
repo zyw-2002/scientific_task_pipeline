@@ -12,6 +12,7 @@ import argparse
 import csv
 import hashlib
 import json
+import math
 import random
 import re
 from datetime import datetime, timezone
@@ -224,7 +225,9 @@ def add_preflight(selection: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def score_summary(rows: Iterable[Mapping[str, Any]], *, target: float = 90.0,
-                  score_kind: str = "scientific") -> dict[str, Any]:
+                  score_kind: str = "scientific",
+                  expected_task_ids: Iterable[str] | None = None,
+                  expected_count: int = DEFAULT_BATCH_SIZE) -> dict[str, Any]:
     """Summarize one rubric namespace without converting missing scores to zero.
 
     ``scientific`` is the Stage3 outcome namespace.  ``task_quality`` is the
@@ -232,8 +235,10 @@ def score_summary(rows: Iterable[Mapping[str, Any]], *, target: float = 90.0,
     selected explicitly so a high task-quality score cannot masquerade as a
     scientific run score.
     """
-    if score_kind not in {"scientific", "task_quality", "trajectory"}:
-        raise ValueError("score_kind must be scientific, task_quality, or trajectory")
+    if score_kind not in {"scientific", "task_quality", "difficulty", "trajectory"}:
+        raise ValueError("score_kind must be scientific, task_quality, difficulty, or trajectory")
+    if expected_count < 1:
+        raise ValueError("expected_count must be positive")
     records = []
     for row in rows:
         observed_score = None
@@ -242,6 +247,8 @@ def score_summary(rows: Iterable[Mapping[str, Any]], *, target: float = 90.0,
             score = row.get("scientific_score")
         elif score_kind == "task_quality":
             score = row.get("q0", row.get("quality_score"))
+        elif score_kind == "difficulty":
+            score = row.get("d0", row.get("difficulty_score"))
         else:
             score = row.get("trajectory_score", row.get("t0"))
         if isinstance(score, Mapping):
@@ -249,7 +256,9 @@ def score_summary(rows: Iterable[Mapping[str, Any]], *, target: float = 90.0,
             coverage = score.get("coverage")
             score = score.get("total", score.get("score", score.get("value")))
         try:
-            score = float(score) if score is not None else None
+            score = float(score) if score is not None and not isinstance(score, bool) else None
+            if score is not None and (not math.isfinite(score) or not 0 <= score <= 100):
+                score = None
         except (TypeError, ValueError):
             score = None
         status = str(row.get("status") or row.get("readiness_status") or "").lower()
@@ -257,6 +266,8 @@ def score_summary(rows: Iterable[Mapping[str, Any]], *, target: float = 90.0,
         if valid is None and row.get("validity_status") is not None:
             valid = row.get("validity_status") in {"valid", "pass"}
         scoreable = score is not None and valid is not False and status not in {"blocked", "data_unavailable", "partial"}
+        if score_kind == "trajectory" and coverage is not None and coverage != 1:
+            scoreable = False
         records.append({"task_id": row.get("task_id") or row.get("sample_id"), "score": score,
                         "score_kind": score_kind,
                         "observed_score": observed_score if score_kind == "trajectory" else None,
@@ -267,21 +278,35 @@ def score_summary(rows: Iterable[Mapping[str, Any]], *, target: float = 90.0,
     observed = [r["observed_score"] for r in records
                 if score_kind == "trajectory" and isinstance(r.get("observed_score"), (int, float))]
     total = len(records)
+    ids = [r["task_id"] for r in records]
+    batch_errors = []
+    if total != expected_count:
+        batch_errors.append(f"expected {expected_count} selected tasks, received {total}")
+    if any(not isinstance(tid, str) or not tid for tid in ids) or len(set(ids)) != total:
+        batch_errors.append("result task IDs must be present and unique")
+    if expected_task_ids is not None:
+        selected = list(expected_task_ids)
+        if len(selected) != expected_count or len(set(selected)) != len(selected):
+            batch_errors.append("selection must contain the expected number of unique task IDs")
+        if set(ids) != set(selected):
+            batch_errors.append("result task IDs differ from the frozen selection")
     return {
         "schema_version": "pipeline-iteration-score-summary-v1",
         "score_kind": score_kind,
         "target": target,
+        "expected_tasks": expected_count,
+        "batch_errors": batch_errors,
         "tasks_total": total,
         "tasks_scoreable": len(scored),
-        "tasks_blocked_or_unscored": total - len(scored),
-        "coverage": len(scored) / total if total else 0.0,
+        "tasks_blocked_or_unscored": max(total, expected_count) - len(scored),
+        "coverage": len(scored) / max(total, expected_count),
         "mean_score_scoreable": sum(scored) / len(scored) if scored else None,
         "mean_observed_score": sum(observed) / len(observed) if observed else None,
         "mean_trajectory_coverage": (sum(r["coverage"] for r in records
                                           if isinstance(r.get("coverage"), (int, float))) /
                                      sum(1 for r in records if isinstance(r.get("coverage"), (int, float))))
                                     if any(isinstance(r.get("coverage"), (int, float)) for r in records) else None,
-        "passed": len(scored) == total and bool(scored) and sum(scored) / len(scored) >= target,
+        "passed": not batch_errors and len(scored) == total and bool(scored) and sum(scored) / len(scored) >= target,
         "records": records,
     }
 
@@ -302,7 +327,8 @@ def main(argv: list[str] | None = None) -> int:
     score.add_argument("--results", type=Path, required=True, help="JSONL or JSON array of task results")
     score.add_argument("--output", type=Path, required=True)
     score.add_argument("--target", type=float, default=90.0)
-    score.add_argument("--score-kind", choices=("scientific", "task_quality"), default="scientific")
+    score.add_argument("--score-kind", choices=("scientific", "task_quality", "difficulty", "trajectory"), default="scientific")
+    score.add_argument("--selection", type=Path, help="Frozen selection.json; prevents omission/replacement of selected tasks")
     args = parser.parse_args(argv)
     if args.command == "select":
         result = select_tasks(args.pool, seed=args.seed, count=args.count,
@@ -310,7 +336,9 @@ def main(argv: list[str] | None = None) -> int:
     elif args.command == "preflight":
         result = add_preflight(json.loads(args.selection.read_text(encoding="utf-8")))
     else:
-        result = score_summary(_read_rows(args.results), target=args.target, score_kind=args.score_kind)
+        selection = json.loads(args.selection.read_text()) if args.selection else None
+        result = score_summary(_read_rows(args.results), target=args.target, score_kind=args.score_kind,
+                               expected_task_ids=selection['selected_task_ids'] if selection else None)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(json.dumps({"status": "written", "output": str(args.output.resolve())}, ensure_ascii=False))

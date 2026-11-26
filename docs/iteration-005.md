@@ -21,8 +21,10 @@ QTD results using the authorized external rubric on task-facing specifications:
 | Population | Q0 | D0 | Coverage note |
 |---|---:|---:|---|
 | Fresh OriginBench batch | 62.000 | 75.000 | 10/10 complete; evaluability and reproducibility are the main weaknesses |
-| NatureBench observed sample | 89.125 | 73.375 | 5/10 missing judge results; incomplete aggregate |
+| NatureBench earlier sample (invalidated) | — | — | mixed in a paper-screening job and omitted mounted public descriptions; not a comparison baseline |
 | ScientistWorld visible sample | 96.625 | 67.938 | 10/10 complete; 4/10 marked review-required |
+
+The historical NatureBench observation is invalidated by the later population audit; it must not be compared with scientific Solver runs.
 
 The T0 structural audit reports `observed_score=39` and `coverage=0.39` for
 the fresh OriginBench trajectories and the observed NatureBench trajectories;

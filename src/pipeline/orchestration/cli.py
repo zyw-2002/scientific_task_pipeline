@@ -28,7 +28,8 @@ def build_parser() -> argparse.ArgumentParser:
     score.add_argument('--results', type=Path, required=True)
     score.add_argument('--output', type=Path, required=True)
     score.add_argument('--target', type=float, default=90.0)
-    score.add_argument('--score-kind', choices=('scientific', 'task_quality', 'trajectory'), default='scientific')
+    score.add_argument('--selection', type=Path, help='Frozen selection.json')
+    score.add_argument('--score-kind', choices=('scientific', 'task_quality', 'difficulty', 'trajectory'), default='scientific')
     return parser
 
 
@@ -60,8 +61,10 @@ def main(argv=None) -> int:
         from pipeline.orchestration.iteration import _read_rows, score_summary
         output = args.output.resolve()
         output.parent.mkdir(parents=True, exist_ok=True)
+        selection = json.loads(args.selection.read_text()) if args.selection else None
         summary = score_summary(_read_rows(args.results.resolve()), target=args.target,
-                                score_kind=args.score_kind)
+                                score_kind=args.score_kind,
+                                expected_task_ids=selection['selected_task_ids'] if selection else None)
         output.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
         print(json.dumps({'status': 'written', 'output': str(output), 'score_kind': args.score_kind,
                           'mean': summary['mean_score_scoreable'], 'passed': summary['passed']}, ensure_ascii=False))

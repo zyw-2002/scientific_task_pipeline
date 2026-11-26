@@ -57,3 +57,13 @@ Candidate fixes discovered while reviewing the actual trajectories are kept on
 advertised relative evaluator command is replaced with an honest automatic
 private-verification interface; no inaccessible command is described as
 callable by the Solver.
+
+A subsequent baseline audit invalidated the old NatureBench sample: its best
+manifest included an external paper-screening job, and the previous adapter
+read generic instructions from trial logs without the task's mounted README
+and data description. The full-population manifest contains 90 eligible
+scientific tasks and one out-of-population screening entry. A new uniform
+ten-task sample (seed 20261126), resolved via trial config to the dataset
+package, includes all required public documents and excludes private scoring
+code. Results are saved under `nature-public-v2`; earlier NatureBench numbers
+(including the attempted network-error completion) are not valid baselines.
