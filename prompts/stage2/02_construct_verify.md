@@ -39,6 +39,16 @@ keep the package in REWORK or BLOCKED.
 - Solver access is declared. This run permits online scientific search, and the public instruction records the difference from the original offline benchmark. Stage 01 uses fixtures only. Full data/checkpoint acquisition and actual split/file reads are Stage3 execution responsibilities.
 - `review_report.json.status` must use the shipped schema values `complete` or `blocked`. Keep it `blocked` while scientific findings or construction checks remain unresolved. `PASS`/`REWORK`/`BLOCKED` are the host contract classification, not report.status values. `complete` requires source review and real metric controls; full-resource verification may remain execution-pending. Use `task_contract_fail`, `agent_capability_fail`, `infrastructure_fail`, or `scientific_validity_fail` only for Stage3 runtime/Judge attribution, not for design status.
 
+Stage2 certifies construction. If all construction checks, source review and
+fixture controls pass, authorized deferred resources alone do not belong in
+`unresolved_blockers` or `construction_pending`. Set the report `complete`,
+retain `real_data_verified=false` and `runtime_verified=false` when appropriate,
+and record each outstanding formal resource/check in `execution_pending` with
+its Stage3 preparation/validation completion condition. Do not claim its bytes
+were verified. Missing authorization, identity/schema, runnable preparation or
+independent validation is still a construction blocker. Never override an
+unresolved scientific finding to make a report complete.
+
 
 ## Shipped tool entrypoints
 

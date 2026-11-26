@@ -194,7 +194,10 @@ def initialize(paths: dict) -> dict:
                               '## Submission\n\n<!-- submission path -->\n', encoding='utf-8')
         # Keep scientific values empty for the author. These objects mirror the
         # formal schema to make the paper inventory editable from the first turn.
-        claims = {key: {} for key in ('objective', 'scale', 'split', 'metric')}
+        # Expose the actual claim ABI without supplying a scientific decision,
+        # origin, quotation or acceptance. The author must ground every value.
+        claims = {key: {'statement': '', 'origin': '', 'source_evidence': [], 'rationale': ''}
+                  for key in ('objective', 'scale', 'split', 'metric')}
         inventory = json.loads(Path(paths['source_inventory']).read_text()) if paths.get('source_inventory') else {}
         displays = {item['id']: {'caption_id': item['id']} for item in inventory.get('paper_captions', [])}
         scope = {'source_basis': '', 'paper_scope': '', 'task_scope': '', 'difficulty_impact': '',

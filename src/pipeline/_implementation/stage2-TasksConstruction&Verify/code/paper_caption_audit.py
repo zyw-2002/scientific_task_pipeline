@@ -126,7 +126,9 @@ def find_source_quotes(bundle, *, phrase=None, source_path=None, line_range=None
         if digest in seen:
             continue
         seen.add(digest)
-        lines = data.decode('utf-8').splitlines()
+        # Share physical LF line numbers with captions() and evidence_lines().
+        # PDF form feeds and Unicode paragraph separators are not source lines.
+        lines = data.decode('utf-8').split('\n')
         def cite(first,last,quote):
             return {'path':name, 'sha256':digest, 'line_start':first, 'line_end':last,
                     'locator':f'lines {first}–{last}', 'quote':quote}

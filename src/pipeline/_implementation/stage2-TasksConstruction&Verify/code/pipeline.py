@@ -1072,7 +1072,9 @@ def parser():
             cmd.add_argument('--max-construct-attempts', type=int, default=setting('max_construct_attempts'), help='01 attempts; 0 retries until rules pass, positive limit blocks without starting 02')
             cmd.add_argument('--max-verify-attempts', type=int, default=setting('max_verify_attempts'))
             cmd.add_argument('--probe-runtime', action=argparse.BooleanOptionalAction, default=False)
-            cmd.add_argument('--construction-only', action='store_true', help='Certify static task-package readiness; defer execution validation')
+            cmd.add_argument('--construction-only', action=argparse.BooleanOptionalAction, default=None,
+                             help='Default: certify construction and defer formal preparation to Stage3; '
+                                  '--no-construction-only retains the legacy execution-readiness gate')
             cmd.add_argument('--resume', action='store_true')
             cmd.add_argument('--output-layout',choices=['compact','legacy'],default='legacy')
             cmd.add_argument('--docker', default=setting('docker'))
@@ -1145,9 +1147,10 @@ def _enter_snapshot(args, argv):
         value = getattr(args, name, None)
         if value is not None:
             forwarded += ['--' + name.replace('_', '-'), str(value)]
-    for name in ('resume', 'construction_only'):
+    for name in ('resume',):
         if getattr(args, name, False):
             forwarded.append('--' + name.replace('_', '-'))
+    forwarded.append('--construction-only' if args.construction_only else '--no-construction-only')
     forwarded.append('--probe-runtime' if args.probe_runtime else '--no-probe-runtime')
     os.execve(sys.executable, [sys.executable, '-B', str(frozen / STAGE2 / 'code/pipeline.py'), *forwarded],
               environment(frozen))
@@ -1171,6 +1174,8 @@ def main(argv=None):
             os.environ['NATUREBENCH_PIPELINE_CONFIG'] = str(STAGE.parent / 'settings.json')
         args = parser().parse_args(argv)
         if args.action == 'run':
+            if args.construction_only is None:
+                args.construction_only = not args.probe_runtime
             if (STAGE.parent / MANIFEST).is_file() and args.run_snapshot is None:
                 args.run_snapshot = STAGE.parent
             _enter_snapshot(args, argv)

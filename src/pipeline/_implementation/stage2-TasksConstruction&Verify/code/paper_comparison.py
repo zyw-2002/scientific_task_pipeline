@@ -321,7 +321,7 @@ def source_claim_errors(package, spec, source_bundle, *, review=False):
                                      'and select the returned exact quote, path, SHA-256 and lines')
                 if 'line_start' in ref or 'line_end' in ref:
                     start, end = ref.get('line_start'), ref.get('line_end')
-                    lines = contents.splitlines()
+                    lines = contents.split('\n')
                     if (type(start) is not int or type(end) is not int or not 1 <= start <= end <= len(lines)
                             or norm(quote) not in norm(' '.join(lines[start-1:end]))):
                         raise ValueError('stated lines do not contain the quoted excerpt')
