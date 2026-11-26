@@ -403,10 +403,17 @@ def build_contract(package, spec, protocol, task):
     metric = protocol['reward_metric']
     runtime = spec['runtime']
     output_dir = str(PurePosixPath(submission['path']).parent)
-    evaluation = dict(service=evidence['service'], command=shlex.split(hooks[0]['command']),
+    # ``task_contract.json`` is mounted in the Solver-visible problem tree.
+    # The collector command and evidence root are private evaluator details
+    # (normally under ``/task/evaluation``); publishing them creates an
+    # information leak and makes otherwise valid packages fail the boundary
+    # gate.  Keep the public contract executable-looking and stable while the
+    # actual collector remains in execution.json/tests and is used by the
+    # Harbor evaluator.  Relative paths also keep the contract portable.
+    evaluation = dict(service=evidence['service'], command=['python', 'evaluation_protocol.py'],
                       metric=metric, direction=protocol['reward_direction'],
                       success_condition=f'Exit code 0, status=success, finite {metric} and finite reward',
-                      attempt_index=evidence['artifact_source'] + '/last_attempt.json')
+                      attempt_index='last_attempt.json')
     validation = spec['verification'].get('public_validation')
     if isinstance(validation, dict):
         evaluation['public_validation'] = {k: validation[k] for k in (

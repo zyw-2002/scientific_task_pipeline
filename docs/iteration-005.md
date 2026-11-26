@@ -29,18 +29,18 @@ the fresh OriginBench trajectories and the observed NatureBench trajectories;
 the semantic F1--F8 layer and task-contract evidence remain unknown. The
 ScientistWorld sample has no Solver trajectories and is explicitly unscored.
 
-I attempted a real current Stage2 reconstruction for S080 using the local
-prebuilt image. The image exists locally under the recorded digest, but the
-automatic safety review rejected the command because the configured public
-Qwen endpoint would receive the private source bundle and authenticated
-authoring interaction. The run therefore stopped before the worker started;
-there is no false Stage2 or Stage3 success claim. The existing historical
-packages also fail the current Stage2 gate on solver contracts, evaluator
-bindings, resources, and public/private boundary checks. No new Stage3 run is
-counted in this iteration.
+The authorized real Stage2 run used the local prebuilt image and the configured
+Qwen endpoint. All ten tasks started genuine authoring workers. A second repair
+round (`--max-construct-attempts 2`) also completed for all ten, but every task
+remained `construction_ready=false`; no Stage3 run was started because the
+pipeline gate correctly prevents execution without a verified package. The
+dominant general failures were public `task_contract` leakage of
+`/task/evaluation`, missing executable calibration/smoke bindings, inconsistent
+paper quote evidence, and incomplete resource/experiment bindings. These are
+recorded as pipeline diagnostics, not case edits or fabricated scores.
 
-The next execution step requires an explicitly approved local/private worker
-endpoint or an equivalent command backend that does not export source bundles.
-Once that execution boundary is available, the same random batch will be run
-with up to ten concurrent workers, followed by Stage3 and T0/scientific
-scoring. The external QTD judge remains limited to the final scoring phase.
+The next revision changes the public contract generator to use a portable
+relative evaluator token and keeps the actual collector private. It also gives
+both authoring and repair workers an explicit order for binding resources,
+paper evidence, calibration and smoke controls while retaining the no-leakage
+gate. The following iteration uses a fresh random ten-task sample.
