@@ -304,7 +304,9 @@ def summarize_semantic_review(review: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
-def score_atif_trajectory(trajectory: Mapping[str, Any], outcome: Mapping[str, Any] | None = None) -> dict[str, Any]:
+def score_atif_trajectory(trajectory: Mapping[str, Any], outcome: Mapping[str, Any] | None = None, *,
+                          trajectory_path: Path | None = None,
+                          semantic_review: Mapping[str, Any] | None = None) -> dict[str, Any]:
     """Score an external ATIF trajectory without assuming its task schema.
 
     This adapter is intentionally conservative.  It reports structural
@@ -338,6 +340,19 @@ def score_atif_trajectory(trajectory: Mapping[str, Any], outcome: Mapping[str, A
             "max": T_EVIDENCE_WEIGHTS["real_execution"],
             "evidence": [f"{len(matched)} observations linked to actual tool call IDs"],
             "status": "observed"}
+    # Use the same original-file/hash/quote boundary as native T-P scoring.
+    # Recompute all totals from dimensions; never add points to a stale
+    # structural subtotal while retaining its old observed maximum or coverage.
+    if trajectory_path is not None and semantic_review is not None:
+        try:
+            same_trajectory = json.loads(trajectory_path.read_bytes()) == trajectory
+        except (OSError, ValueError, TypeError):
+            same_trajectory = False
+        accepted = _bound_semantic_scores(semantic_review, trajectory_path) if same_trajectory else {}
+        for name, points in accepted.items():
+            dimensions[name] = {'score': points, 'max': T_PROCESS_WEIGHTS[name],
+                                'evidence': semantic_review['criteria'][name]['evidence'],
+                                'status': 'observed'}
     observed = [x for x in dimensions.values() if x["status"] == "observed" and x["score"] is not None]
     observed_score = sum(x["score"] for x in observed)
     observed_max = sum(x["max"] for x in observed)

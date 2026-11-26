@@ -151,3 +151,19 @@ unscored instead of being truncated. Actual string span IDs are normalized
 to the same validated pointer objects; unknown IDs still fail. The first
 segment's returned response was reused only after exact request/prompt hash
 checks. Full test suite: 51 passing. The complete real review remains running.
+
+The long-trajectory integration review has completed: all 195 original steps
+were externally reviewed in seven ordered segments, followed by one global
+judgment. All eight exact-bound criteria scored 5, giving T-P=40/40. This is
+not T0=100: the historical trace still lacks independent native evidence for
+the other mechanical dimensions. The same fixed NatureBench sample is now
+being reviewed with the same client, keeping a malformed historical trace
+unknown rather than replacing it.
+
+The external ATIF adapter now accepts a hash/quote-bound semantic review and
+recomputes both observed points and their maximum from the same dimensions.
+This replaces earlier ad-hoc report augmentation that could add process
+points while retaining a stale 12-point observed maximum. A 32/40 process
+review plus 12/12 linked execution evidence correctly reports 44 observed
+points out of 52 assessed, 52% dimensional coverage, and no complete T0.
+Changed source bytes invalidate the process contribution. All 52 tests pass.

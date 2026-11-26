@@ -9,6 +9,29 @@ from pipeline.orchestration.trajectory_quality import (T0_WEIGHTS, score_traject
 
 
 class TrajectoryQualityTests(unittest.TestCase):
+    def test_external_process_points_and_coverage_share_the_same_bound_dimensions(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp)/'trajectory.json'
+            trajectory = {'steps': [{'step_id': 1, 'source': 'agent',
+                'message': 'Checked actual inputs before computation.',
+                'tool_calls': [{'tool_call_id': 'read1'}],
+                'observation': {'results': [{'source_call_id': 'read1', 'content': 'observed actual inputs'}]}}]}
+            path.write_text(json.dumps(trajectory))
+            review = {'trajectory_sha256': hashlib.sha256(path.read_bytes()).hexdigest(), 'criteria': {
+                name: {'score': 4, 'reason': 'Supported process behavior',
+                       'evidence': [{'step_id': 1, 'quote': 'Checked actual inputs before computation'}]}
+                for name in T0_WEIGHTS if name not in {'formal_input_use', 'data_integrity', 'contract_adherence',
+                    'real_execution', 'validation_and_recovery', 'claim_support'}}}
+            report = score_atif_trajectory(trajectory, trajectory_path=path, semantic_review=review)
+            self.assertEqual(report['observed_score'], 44)
+            self.assertEqual(report['observed_max_score'], 52)
+            self.assertEqual(report['coverage'], 0.52)
+            self.assertIsNone(report['score'])
+            self.assertIn('formal_input_use', report['unknown_dimensions'])
+            path.write_text('{"steps":[]}')
+            changed = score_atif_trajectory(trajectory, trajectory_path=path, semantic_review=review)
+            self.assertEqual(changed['observed_max_score'], 12)
+
     def test_native_receipts_verify_data_and_accept_zero_metric(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
