@@ -6,6 +6,7 @@ results and source trajectories remain immutable.
 """
 from __future__ import annotations
 import argparse
+import copy
 import hashlib
 import json
 import time
@@ -18,6 +19,22 @@ from typing import Mapping
 from pipeline.orchestration.trajectory_quality import T_PROCESS_WEIGHTS, _bound_semantic_scores
 
 ROOT = Path(__file__).resolve().parents[3]
+
+
+def behavior_view(trajectory: dict) -> dict:
+    """Keep all ATIF behavior text; omit duplicate provider/usage telemetry."""
+    steps = []
+    for original in trajectory['steps']:
+        if not isinstance(original, Mapping):
+            raise ValueError('ATIF steps must be objects')
+        step = {key: copy.deepcopy(original[key]) for key in
+                ('step_id', 'source', 'role', 'message', 'reasoning_content', 'observation')
+                if key in original}
+        if 'tool_calls' in original:
+            step['tool_calls'] = [{key: copy.deepcopy(value) for key, value in call.items()
+                                   if key != 'extra'} for call in original['tool_calls']]
+        steps.append(step)
+    return {'steps': steps}
 
 
 def evidence_spans(trajectory: dict) -> dict:
@@ -42,10 +59,10 @@ def evidence_spans(trajectory: dict) -> dict:
     return spans
 
 
-def checked_review(raw: Mapping, trajectory: Path) -> dict:
+def checked_review(raw: Mapping, trajectory: Path, *, span_map: dict | None = None) -> dict:
     if not isinstance(raw, Mapping): raise ValueError('judge output must be an object')
     raw = json.loads(json.dumps(raw))
-    spans = evidence_spans(json.loads(trajectory.read_bytes()))
+    spans = span_map if span_map is not None else evidence_spans(json.loads(trajectory.read_bytes()))
     criteria = raw.get('criteria', {})
     for row in criteria.values() if isinstance(criteria, Mapping) else []:
         if not isinstance(row, Mapping) or not isinstance(row.get('evidence'), list): continue
@@ -92,9 +109,11 @@ def score_process(*, task_spec: dict, trajectory: Path, env_file: Path,
     documents = [{k: doc[k] for k in ('role', 'path', 'text')}
                  for doc in task_spec['documents'] if doc.get('role') in public_roles]
     if not documents: raise ValueError('process review requires actual public task documents')
+    projected = behavior_view(evidence)
+    spans = evidence_spans(projected)
     payload_view = {'task': {'task_id': task_spec['task_id'], 'documents': documents,
         'task_text': '\n\n'.join(doc['text'] for doc in documents)},
-        'trajectory': {'steps': evidence['steps']}, 'evidence_spans': evidence_spans(evidence)}
+        'trajectory': projected, 'evidence_spans': spans}
     content = json.dumps(payload_view, ensure_ascii=False)
     if len(content.encode()) > 8_000_000:
         raise ValueError('trajectory review exceeds input limit; no silent truncation')
@@ -117,6 +136,8 @@ def score_process(*, task_spec: dict, trajectory: Path, env_file: Path,
     output.mkdir(parents=True)
     (output/'request-identity.json').write_text(json.dumps({'task_id':task_spec['task_id'],
         'model':model, 'trajectory_sha256':hashlib.sha256(trajectory.read_bytes()).hexdigest(),
+        'trajectory_view': 'all ATIF behavior fields; provider/usage telemetry omitted',
+        'original_step_count': len(evidence['steps']), 'transmitted_step_count': len(projected['steps']),
         'public_view_sha256':hashlib.sha256(content.encode()).hexdigest(),
         'prompt_sha256':hashlib.sha256(prompt.encode()).hexdigest()},indent=2)+'\n')
     transport = []
@@ -125,7 +146,12 @@ def score_process(*, task_spec: dict, trajectory: Path, env_file: Path,
             with opener.open(request, timeout=600) as response: data = response.read()
             break
         except urllib.error.HTTPError as exc:
-            transport.append({'attempt': attempt+1, 'http_status': exc.code})
+            error_body = exc.read()
+            lowered = error_body.lower()
+            transport.append({'attempt': attempt+1, 'http_status': exc.code,
+                'response_sha256': hashlib.sha256(error_body).hexdigest(),
+                'context_limit': any(token in lowered for token in
+                    (b'context length', b'context window', b'maximum context', b'too many tokens'))})
             (output/'transport-events.json').write_text(json.dumps(transport,indent=2)+'\n')
             if exc.code != 429 or attempt == 2: raise
             try: retry_after = float(exc.headers.get('Retry-After', '0'))
@@ -135,7 +161,7 @@ def score_process(*, task_spec: dict, trajectory: Path, env_file: Path,
     envelope = json.loads(data); message = envelope['choices'][0]['message']
     if message.get('tool_calls') or message.get('function_call'): raise ValueError('judge returned forbidden tool calls')
     raw = json.loads(message['content'])
-    result = checked_review(raw, trajectory)
+    result = checked_review(raw, trajectory, span_map=spans)
     result['usage'] = envelope.get('usage')
     result['task_id'] = task_spec['task_id']
     (output/'process-review.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')

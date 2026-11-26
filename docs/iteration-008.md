@@ -79,3 +79,18 @@ trajectory quotes. Complete T0 remains unknown because historical native
 mechanical evidence is incomplete. The rest of the same sample is being
 reviewed with bounded request concurrency; the first task was not selected by
 its outcome or score.
+
+Real construction traces continued to show unsupported paper claims and
+experiment bindings while the authoring prompt demanded all files within five
+tool turns. The prompt now establishes source-grounded objective, experiments,
+resources, splits and metrics before a coherent draft, preserves the shipped
+ABI scaffold, and uses configured runtime/attempt budgets instead of an
+arbitrary corrective-turn cutoff. Scientific checks are not weakened.
+
+The final process scorer now transmits all canonical ATIF behavior fields
+for every step while omitting duplicate provider/usage telemetry. Messages,
+reasoning text, tool arguments and observations are preserved without text
+truncation; step counts and full original hashes are audited. Exact span
+references still resolve against the original trajectory. This targets an
+observed HTTP 400 on a long historical trace while preserving evidence.
+All 46 tests pass.

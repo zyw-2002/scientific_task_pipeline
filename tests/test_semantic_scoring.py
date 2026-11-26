@@ -2,11 +2,27 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
-from pipeline.orchestration.semantic_scoring import checked_review, evidence_spans
+from pipeline.orchestration.semantic_scoring import checked_review, evidence_spans, behavior_view
 from pipeline.orchestration.trajectory_quality import T_PROCESS_WEIGHTS
 
 
 class SemanticScoringTests(unittest.TestCase):
+    def test_behavior_projection_preserves_all_steps_commands_and_results(self):
+        text='Observed data and the complete scientific result.\n'*100
+        trace={'steps':[{'step_id':9,'source':'agent','message':text,'reasoning_content':'Choose a method',
+            'tool_calls':[{'tool_call_id':'call1','function_name':'Bash',
+                           'arguments':{'command':'python run.py'},'extra':{'raw_arguments':'duplicate'}}],
+            'observation':{'results':[{'source_call_id':'call1','content':text}]},
+            'extra':{'provider':'duplicate telemetry'},'metrics':{'tokens':123}}]}
+        view=behavior_view(trace)
+        self.assertEqual(len(view['steps']),len(trace['steps']))
+        self.assertEqual(view['steps'][0]['message'],text)
+        self.assertEqual(view['steps'][0]['observation'],trace['steps'][0]['observation'])
+        self.assertEqual(view['steps'][0]['tool_calls'][0]['arguments'],{'command':'python run.py'})
+        self.assertNotIn('extra',view['steps'][0])
+        self.assertNotIn('extra',view['steps'][0]['tool_calls'][0])
+        self.assertIn('extra',trace['steps'][0])
+
     def test_span_pointers_resolve_to_exact_original_text(self):
         with tempfile.TemporaryDirectory() as tmp:
             path=Path(tmp)/'trajectory.json'
