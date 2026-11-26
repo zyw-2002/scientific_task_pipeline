@@ -167,3 +167,14 @@ points while retaining a stale 12-point observed maximum. A 32/40 process
 review plus 12/12 linked execution evidence correctly reports 44 observed
 points out of 52 assessed, 52% dimensional coverage, and no complete T0.
 Changed source bytes invalidate the process contribution. All 52 tests pass.
+
+The ensuing fixed-sample NatureBench review exposed two response-format
+defects: one invented span ID in an otherwise valid segment, and criterion
+objects mistakenly nested under another criterion. Unique named criterion
+objects can now be flattened without altering their observations; ambiguous
+duplicates are rejected. A segment gets at most one external citation-only
+repair after validation fails, independent of any score. Every observation
+statement and its order must remain identical, otherwise the repair is
+rejected. Unfinished reviews may resume only with identical archived model,
+prompt and input hashes; complete reviews cannot be overwritten. Cache reuse
+is audited and never selects a preferred score. All 54 tests pass.

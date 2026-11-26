@@ -59,9 +59,29 @@ def evidence_spans(trajectory: dict) -> dict:
     return spans
 
 
+def _criterion_rows(criteria: Mapping) -> dict:
+    """Flatten misplaced criterion objects only when their names are unique."""
+    found = {}
+    def visit(value):
+        if isinstance(value, Mapping):
+            for name, item in value.items():
+                if name in T_PROCESS_WEIGHTS and isinstance(item, Mapping):
+                    if name in found:
+                        raise ValueError('ambiguous duplicate criterion: '+name)
+                    found[name] = item
+                visit(item)
+        elif isinstance(value, list):
+            for item in value:
+                visit(item)
+    visit(criteria)
+    return found
+
+
 def checked_review(raw: Mapping, trajectory: Path, *, span_map: dict | None = None) -> dict:
     if not isinstance(raw, Mapping): raise ValueError('judge output must be an object')
     raw = json.loads(json.dumps(raw))
+    if isinstance(raw.get('criteria'), Mapping):
+        raw['criteria'] = _criterion_rows(raw['criteria'])
     spans = span_map if span_map is not None else evidence_spans(json.loads(trajectory.read_bytes()))
     criteria = raw.get('criteria', {})
     for row in criteria.values() if isinstance(criteria, Mapping) else []:
@@ -121,9 +141,9 @@ def checked_segment_facts(raw: Mapping, spans: dict) -> dict:
     """Accept only evidence-bound observations, never provisional point scores."""
     if not isinstance(raw, Mapping) or not isinstance(raw.get('criteria'), Mapping):
         raise ValueError('segment reviewer must return criterion observations')
-    criteria = {}
+    criteria, rows = {}, _criterion_rows(raw['criteria'])
     for name in T_PROCESS_WEIGHTS:
-        row = raw['criteria'].get(name)
+        row = rows.get(name)
         if not isinstance(row, Mapping) or not isinstance(row.get('observations'), list):
             raise ValueError('segment review omitted observations for '+name)
         observations = []
@@ -144,7 +164,7 @@ def checked_segment_facts(raw: Mapping, spans: dict) -> dict:
 
 
 def _call_judge(*, content: dict, prompt: str, env: dict, output: Path,
-                proxy_url: str | None) -> tuple[dict, dict | None]:
+                proxy_url: str | None, use_cache: bool = False) -> tuple[dict, dict | None]:
     endpoint = (env.get('BASE_URL') or env.get('OPENAI_BASE_URL') or '').rstrip('/')
     parsed = urlsplit(endpoint)
     if (parsed.scheme not in {'https','http'} or not parsed.hostname or parsed.username
@@ -155,6 +175,24 @@ def _call_judge(*, content: dict, prompt: str, env: dict, output: Path,
     key = env.get('API_KEY') or env.get('OPENAI_API_KEY') or env.get('OPENROUTER_API_KEY')
     if not model or not key: raise ValueError('configure the final judge model and API credential')
     content_text = json.dumps(content, ensure_ascii=False)
+    request_identity = {'model':model,
+        'public_view_sha256':hashlib.sha256(content_text.encode()).hexdigest(),
+        'prompt_sha256':hashlib.sha256(prompt.encode()).hexdigest()}
+    if use_cache and (output/'request-identity.json').is_file():
+        if (json.loads((output/'request-identity.json').read_text()) != request_identity
+                or (output/'request-view.json').read_text() != content_text+'\n'):
+            raise ValueError('saved judge response has a different request identity')
+    if use_cache and (output/'api-response.json').is_file():
+        response_bytes = (output/'api-response.json').read_bytes()
+        envelope = json.loads(response_bytes)
+        message = envelope['choices'][0]['message']
+        if message.get('tool_calls') or message.get('function_call'):
+            raise ValueError('saved judge response contains forbidden tool calls')
+        (output/'cache-reuse.json').write_text(json.dumps({
+            'request_identity': request_identity,
+            'response_sha256': hashlib.sha256(response_bytes).hexdigest(),
+            'reason': 'identical request reused while resuming an unfinished review'}, indent=2)+'\n')
+        return json.loads(message['content']), envelope.get('usage')
     body = {'model': model, 'temperature': 0, 'response_format': {'type': 'json_object'},
         'max_tokens': 6000, 'messages': [{'role':'system','content':prompt}, {'role':'user','content':content_text}]}
     request = urllib.request.Request(endpoint, data=json.dumps(body, ensure_ascii=False).encode(),
@@ -164,9 +202,7 @@ def _call_judge(*, content: dict, prompt: str, env: dict, output: Path,
     # The archived request contains only the explicit public view and behavior;
     # credentials are attached as transport headers and are never archived.
     (output/'request-view.json').write_text(content_text+'\n')
-    (output/'request-identity.json').write_text(json.dumps({
-        'model':model, 'public_view_sha256':hashlib.sha256(content_text.encode()).hexdigest(),
-        'prompt_sha256':hashlib.sha256(prompt.encode()).hexdigest()},indent=2)+'\n')
+    (output/'request-identity.json').write_text(json.dumps(request_identity,indent=2)+'\n')
     transport = []
     for attempt in range(3):
         try:
@@ -192,10 +228,39 @@ def _call_judge(*, content: dict, prompt: str, env: dict, output: Path,
     return json.loads(message['content']), envelope.get('usage')
 
 
+def _segment_observations(*, content, prompt, env, output, proxy_url, use_cache=False):
+    usages = []
+    raw, usage = _call_judge(content=content, prompt=prompt, env=env, output=output,
+                             proxy_url=proxy_url, use_cache=use_cache)
+    usages.append(usage)
+    try:
+        return checked_segment_facts(raw, content['evidence_spans']), usages
+    except ValueError as error:
+        # One citation-only repair is triggered by validation, never by points.
+        # Observation statements and their order must remain unchanged.
+        repair_content = {**content, 'citation_repair': {
+            'previous_output': raw, 'validation_error': str(error),
+            'instruction': 'Correct only evidence references to actual supplied span IDs. '
+                           'Preserve every observation reason and its order exactly. '
+                           'Do not remove, soften or replace observations. If no supporting span '
+                           'exists, leave the unresolved citation unchanged; do not invent evidence.'}}
+        repaired, usage = _call_judge(content=repair_content, prompt=prompt, env=env,
+            output=output/'citation-repair-01', proxy_url=proxy_url, use_cache=use_cache)
+        usages.append(usage)
+        def statements(value):
+            rows = _criterion_rows(value['criteria'])
+            return {name: [fact['reason'] for fact in rows[name]['observations']]
+                    for name in T_PROCESS_WEIGHTS}
+        if statements(raw) != statements(repaired):
+            raise ValueError('citation repair changed the observation statements')
+        return checked_segment_facts(repaired, content['evidence_spans']), usages
+
+
 def score_process(*, task_spec: dict, trajectory: Path, env_file: Path,
                   output: Path, proxy_url: str | None = None,
-                  segment_bytes: int = 400_000) -> dict:
-    if output.exists(): raise ValueError('refusing to overwrite final process review: '+str(output))
+                  segment_bytes: int = 400_000, resume: bool = False) -> dict:
+    if output.exists() and (not resume or (output/'process-review.json').exists()):
+        raise ValueError('refusing to overwrite final process review: '+str(output))
     original = trajectory.read_bytes()
     evidence = json.loads(original)
     if not isinstance(evidence, dict) or not isinstance(evidence.get('steps'), list):
@@ -213,7 +278,7 @@ def score_process(*, task_spec: dict, trajectory: Path, env_file: Path,
         raise ValueError('trajectory review exceeds input limit; no silent truncation')
     env = _env(env_file)
     prompt = (ROOT/'prompts/evaluation/trajectory_process_spans.md').read_text()
-    output.mkdir(parents=True)
+    output.mkdir(parents=True, exist_ok=resume)
     segmented = len(content.encode()) > 600_000
     identity = {'task_id': task_spec['task_id'],
         'model': env.get('MODEL_NAME') or env.get('OPENAI_MODEL'),
@@ -223,6 +288,9 @@ def score_process(*, task_spec: dict, trajectory: Path, env_file: Path,
         'public_view_sha256': hashlib.sha256(content.encode()).hexdigest(),
         'prompt_sha256': hashlib.sha256(prompt.encode()).hexdigest(),
         'review_protocol': 'complete_segments_then_global_judgment_v1' if segmented else 'full_behavior_v1'}
+    if resume and (output/'request-identity.json').is_file():
+        if json.loads((output/'request-identity.json').read_text()) != identity:
+            raise ValueError('unfinished review identity differs from the requested review')
     (output/'request-identity.json').write_text(json.dumps(identity,indent=2)+'\n')
     usages = []
     if segmented:
@@ -237,12 +305,11 @@ def score_process(*, task_spec: dict, trajectory: Path, env_file: Path,
                                  'first_step_index': offset, 'step_count': len(group['steps']),
                                  'total_step_count': len(projected['steps'])}}
             directory = output/'segments'/f'{index:04d}'
-            raw, usage = _call_judge(content=view, prompt=segment_prompt, env=env,
-                                    output=directory, proxy_url=proxy_url)
-            facts = checked_segment_facts(raw, segment_spans)
+            facts, segment_usages = _segment_observations(content=view, prompt=segment_prompt,
+                env=env, output=directory, proxy_url=proxy_url, use_cache=resume)
             facts['position'] = view['position']
             (directory/'bound-facts.json').write_text(json.dumps(facts,ensure_ascii=False,indent=2)+'\n')
-            segment_facts.append(facts);usages.append(usage)
+            segment_facts.append(facts);usages.extend(segment_usages)
             for row in facts['criteria'].values():
                 for fact in row['observations']:
                     for ref in fact['evidence']:
@@ -263,7 +330,7 @@ def score_process(*, task_spec: dict, trajectory: Path, env_file: Path,
                    'Use null when the extracted evidence cannot support a criterion. Cite only supplied span IDs.\n')
         spans = selected_spans
     raw, usage = _call_judge(content=payload_view, prompt=prompt, env=env,
-                            output=output/'final-review', proxy_url=proxy_url)
+                            output=output/'final-review', proxy_url=proxy_url, use_cache=resume)
     if trajectory.read_bytes() != original:
         raise ValueError('trajectory changed during process review')
     result = checked_review(raw, trajectory, span_map=spans)
@@ -278,9 +345,12 @@ def main(argv=None):
     p.add_argument('--task-specs',type=Path,required=True);p.add_argument('--task-id',required=True)
     p.add_argument('--trajectory',type=Path,required=True);p.add_argument('--env-file',type=Path,required=True)
     p.add_argument('--output',type=Path,required=True);p.add_argument('--proxy-url')
+    p.add_argument('--resume-incomplete', action='store_true',
+                   help='Reuse identical archived requests only; completed reviews are never overwritten')
     args=p.parse_args(argv); matches=[json.loads(line) for line in args.task_specs.read_text().splitlines() if line.strip() and json.loads(line)['task_id']==args.task_id]
     if len(matches)!=1: raise ValueError('expected exactly one public task specification')
-    result=score_process(task_spec=matches[0],trajectory=args.trajectory,env_file=args.env_file,output=args.output,proxy_url=args.proxy_url)
+    result=score_process(task_spec=matches[0],trajectory=args.trajectory,env_file=args.env_file,output=args.output,
+                         proxy_url=args.proxy_url,resume=args.resume_incomplete)
     print(json.dumps({'task_id':args.task_id,'score':result['score'],'unknown_dimensions':result['unknown_dimensions']}))
 
 

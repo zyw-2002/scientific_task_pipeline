@@ -122,3 +122,9 @@ It audits total step coverage and the immutable original hash. Segments are
 not assigned point scores or averaged. Final scores are checked against the
 original trajectory, and unsupported criteria remain unknown. Reports record
 the review protocol so this preprocessing is visible when comparing runs.
+
+Citation validation failures permit one citation-only repair per segment;
+observation statements cannot be changed or removed. Identical requests in
+unfinished reviews may reuse archived responses, with model/prompt/input
+identity checks. A finished review is never overwritten, and neither repair
+nor reuse is triggered by the numerical score.
