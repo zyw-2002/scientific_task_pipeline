@@ -114,3 +114,11 @@ The text-only final semantic scorer can be run with
 Its 40-point process score is separate from the 60-point native mechanical
 evidence. External traces lacking native input/contract evidence retain an
 incomplete total T0 even when all eight process criteria are reviewed.
+
+Long trajectories use the same criteria and weights. The client reviews
+consecutive complete behavior steps in bounded segments, extracts observations
+with exact source spans, then performs a single global process judgment.
+It audits total step coverage and the immutable original hash. Segments are
+not assigned point scores or averaged. Final scores are checked against the
+original trajectory, and unsupported criteria remain unknown. Reports record
+the review protocol so this preprocessing is visible when comparing runs.
