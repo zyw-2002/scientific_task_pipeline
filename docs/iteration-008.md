@@ -55,3 +55,13 @@ Public-source leakage checks now also recognize bare DOI strings and DOI
 values inside JSON manifests, not just labeled `DOI:` prose or doi.org links.
 Both the runtime compatibility module and public validator share that rule;
 authored source evidence stays private. All 43 tests pass.
+
+A second runtime recovery defect was confirmed by Iteration 007 S100: Harbor
+reported AgentTimeoutError after the authoring deadline and safely archived
+one partial package, but marked the failure non-retryable and skipped the
+remaining configured attempt. A completed single-trial timeout is now eligible
+for the existing recovery path only when frozen inputs are intact, exactly one
+safe partial package was collected, and retry budget remains. Arbitrary trial
+exceptions, ambiguous artifacts and unsafe copies remain non-retryable. A
+failed worker never gains readiness; the recovered draft must undergo another
+construction attempt and all normal checks. All 44 tests pass.

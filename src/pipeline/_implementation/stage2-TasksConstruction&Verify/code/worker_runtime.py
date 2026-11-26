@@ -26,6 +26,13 @@ class AuthoringWorkerError(ValueError):
         self.details = details or {}
         self.retryable = code in {'agent_loop_limit', 'tmux_session_lost',
                                   'container_runtime_lost', 'environment_start_failed'}
+        if (code == 'harbor_trial_failed' and self.details.get('trial_count') == 1
+                and self.details.get('job_finished') is True
+                and self.details.get('exception_types') == ['AgentTimeoutError']):
+            # This remains a failed trial. compact_outputs only permits
+            # recovery when exactly one safe partial package is preserved;
+            # pipeline.py additionally checks frozen inputs and retry budget.
+            self.retryable = True
         descriptions = {
             'agent_loop_limit': 'agent stopped by loop detection / per-turn tool-call limit',
             'tmux_session_lost': 'the authoring terminal disappeared while sending keys',
