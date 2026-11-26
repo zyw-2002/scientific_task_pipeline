@@ -8,6 +8,15 @@ from pipeline.orchestration.iteration import add_preflight, score_summary, selec
 
 
 class IterationControlTests(unittest.TestCase):
+    def test_native_execution_ids_do_not_replace_the_selected_seed_ids(self):
+        selected = [f'S{i:03d}' for i in range(10)]
+        rows = [{'sample_id': tid, 'task_id': f'native-execution-{index}', 'q0': 95}
+                for index, tid in enumerate(selected)]
+        report = score_summary(rows, score_kind='task_quality', expected_task_ids=selected)
+        self.assertTrue(report['passed'])
+        self.assertEqual([row['task_id'] for row in report['records']], selected)
+        self.assertEqual(rows[0]['task_id'], 'native-execution-0')
+
     def test_selection_is_reproducible_and_exactly_ten(self):
         with tempfile.TemporaryDirectory() as temp:
             pool = Path(temp) / "pool.jsonl"

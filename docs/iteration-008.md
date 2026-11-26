@@ -178,3 +178,26 @@ statement and its order must remain identical, otherwise the repair is
 rejected. Unfinished reviews may resume only with identical archived model,
 prompt and input hashes; complete reviews cannot be overwritten. Cache reuse
 is audited and never selects a preferred score. All 54 tests pass.
+
+The endpoint subsequently returned `insufficient_quota` / "Workspace allocated
+quota exceeded, please increase your quota limit", followed by HTTP 403 on
+some later requests. Grading and queued-launch supervisors were stopped to
+avoid further unavailable requests. Actual Stage2/Stage3 child processes and
+their outputs were preserved. `quota-checkpoint.json` records all ten selected
+IDs and nine started immutable worker snapshots; S099 remains not started
+because of the environment block, not removed from the batch. The unchanged
+100-task pool was also preserved under the ignored runtime pool directory.
+The next candidate is not launched while this endpoint remains unavailable.
+
+The final grader now treats quota exhaustion as an explicit environment block
+and immediately stops retrying it as ordinary HTTP 429 rate limiting. The
+partial NatureBench review and unfinished grading ledgers remain available
+for identity-checked continuation; absent grades are not scientific zeroes.
+No complete Iteration 008 Q/D/T result or improvement is claimed.
+
+Iteration summaries now prefer the selected `sample_id` when native Stage3
+also supplies its own hashed execution `task_id`. This matches seed-pool
+identity handling and prevents an otherwise valid native result being
+misreported as a task replacement. Native execution identities remain intact.
+Quota/no-retry and selected-ID regression checks bring the suite to 56 tests,
+all passing.

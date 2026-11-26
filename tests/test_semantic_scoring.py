@@ -1,6 +1,8 @@
 import json
 import copy
 import hashlib
+import io
+import urllib.error
 from pathlib import Path
 import tempfile
 import unittest
@@ -8,11 +10,29 @@ from unittest.mock import patch
 from pipeline.orchestration.semantic_scoring import (
     checked_review, evidence_spans, behavior_view, segment_views, checked_segment_facts, score_process,
     _segment_observations, _call_judge,
+    JudgeQuotaExhausted,
 )
 from pipeline.orchestration.trajectory_quality import T_PROCESS_WEIGHTS
 
 
 class SemanticScoringTests(unittest.TestCase):
+    def test_quota_exhaustion_is_an_environment_block_without_rate_limit_retries(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            error = urllib.error.HTTPError('https://judge.example/v1', 429, 'quota', {},
+                io.BytesIO(b'{"error":{"code":"insufficient_quota","message":"Workspace allocated quota exceeded"}}'))
+            with patch('pipeline.orchestration.semantic_scoring.urllib.request.build_opener') as opener, patch(
+                    'pipeline.orchestration.semantic_scoring.time.sleep') as sleep:
+                opener.return_value.open.side_effect = error
+                with self.assertRaises(JudgeQuotaExhausted):
+                    _call_judge(content={'public': 'evidence'}, prompt='Fixed rubric', env={
+                        'BASE_URL': 'https://judge.example/v1', 'MODEL_NAME': 'test', 'API_KEY': 'dummy'},
+                        output=root, proxy_url=None)
+                self.assertEqual(opener.return_value.open.call_count, 1)
+                sleep.assert_not_called()
+            self.assertTrue(json.loads((root/'transport-events.json').read_text())[0]['quota_exhausted'])
+            self.assertFalse((root/'api-response.json').exists())
+
     def test_citation_repair_is_bounded_and_cannot_rewrite_observations(self):
         raw = {'criteria': {name: {'observations': [{'reason': 'Observed substantive behavior',
             'evidence': ['valid']}]} for name in T_PROCESS_WEIGHTS}}
