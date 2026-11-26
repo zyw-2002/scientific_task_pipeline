@@ -559,7 +559,9 @@ def check_static(root: Path, spec: dict[str, Any], *, deferred_resources=None, c
     # locators/result claims in private authoring evidence only; otherwise the
     # task can be solved by searching the cited paper or repository.
     public_paths = [item for item in identity_paths if item.is_relative_to(public)]
-    solver_visible_paths = public_paths + [package_path(root, layout["instruction_path"])]
+    # method.md is private while authoring, but is delivered in Guided runs.
+    solver_visible_paths = public_paths + [package_path(root, layout["instruction_path"]),
+                                           package_path(root, layout["method_path"])]
     for item in solver_visible_paths:
         relative = item.relative_to(root).as_posix()
         for error in solver_visible_leakage_errors(_read(item), relative_path=relative):

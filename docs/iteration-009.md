@@ -43,3 +43,14 @@ Preflight: 1 ready, 1 downloadable, 8 partial. All IDs remain in the denominator
 Real construction/execution has not yet begun for this candidate; a new
 score or improvement is not claimed. It remains off main pending comparable
 complete construction, Stage3 and rubric evidence.
+
+An additional public-boundary defect was observed in the same real S094
+review: the complete source-paper title had survived the generic static
+patterns. Source-aware validation now checks a sufficiently distinctive full
+title from the frozen paper record against public documents and Guided method
+guidance, normalizing punctuation, line breaks and case. It does not ban
+generic method vocabulary. The general locator/result scanner now also covers
+`method.md`, which becomes visible in Guided Stage3 runs. Authoring guidance
+states this boundary explicitly. Private source evidence remains private;
+existing task packages and historical scores are not rewritten. The candidate
+incorporates the preceding long-trajectory scoring revision; all 54 tests pass.

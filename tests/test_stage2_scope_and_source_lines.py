@@ -9,6 +9,29 @@ from pipeline._legacy_loader import STAGE2_ROOT, implementation_paths, load_file
 
 
 class Stage2ScopeAndSourceTests(unittest.TestCase):
+    def test_frozen_source_title_is_blocked_in_public_docs_and_guided_methods(self):
+        comparison = load_file(STAGE2_ROOT/'code/paper_comparison.py', '_source_title_boundary', stage=2)
+        with tempfile.TemporaryDirectory() as tmp, implementation_paths(stage=2):
+            root = Path(tmp); bundle = root/'source'; bundle.mkdir()
+            (bundle/'paper_record.json').write_text(json.dumps({
+                'canonical_id': 'paper', 'title': 'A General Method for Measuring Scientific Quantities'}))
+            package = root/'package'; public = package/'common_task/environment/input'; public.mkdir(parents=True)
+            method = package/'method.md'; method.write_text('A GENERAL METHOD—FOR MEASURING SCIENTIFIC QUANTITIES')
+            instruction = package/'common_task/instruction.md'; instruction.write_text('Implement a measurement algorithm.')
+            manifest = {'paper_record_path': 'paper_record.json'}
+            # Resolve the same method location as the production boundary.
+            from contract import package_layout
+            method_path = package/package_layout({})['method_path']; method_path.parent.mkdir(parents=True, exist_ok=True)
+            method.rename(method_path)
+            errors = comparison.public_source_title_errors(package, {'canonical_id': 'paper'}, bundle, manifest)
+            self.assertEqual(len(errors), 1)
+            self.assertIn(str(method_path.relative_to(package)), errors[0])
+            method_path.write_text('Use a general measurement algorithm with independent validation.')
+            (public/'README.md').write_text('A General Method for Measuring\nScientific Quantities')
+            self.assertEqual(len(comparison.public_source_title_errors(package, {'canonical_id': 'paper'}, bundle, manifest)), 1)
+            (public/'README.md').write_text('The supplied measurements have the documented schema.')
+            self.assertEqual(comparison.public_source_title_errors(package, {'canonical_id': 'paper'}, bundle, manifest), [])
+
     def test_stage2_defaults_to_construction_and_preserves_explicit_runtime_modes(self):
         module = load_file(STAGE2_ROOT/'code/pipeline.py', '_stage2_scope_defaults', stage=2)
         for flags, expected in [([], True), (['--probe-runtime'], False),

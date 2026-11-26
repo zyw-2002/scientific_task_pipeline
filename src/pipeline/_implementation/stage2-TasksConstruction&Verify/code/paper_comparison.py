@@ -229,6 +229,36 @@ def main():
 if __name__ == '__main__': main()
 
 
+def public_source_title_errors(package, spec, bundle, manifest):
+    """Detect the frozen source's full title without banning method vocabulary."""
+    import unicodedata
+    from contract import package_layout, package_path
+    bundle, package = Path(bundle).resolve(), Path(package).resolve()
+    relative = manifest.get('paper_record_path')
+    if not isinstance(relative, str) or not relative:
+        return []
+    record_path = (bundle/relative).resolve()
+    if not record_path.is_relative_to(bundle) or not record_path.is_file():
+        return ['source title record is missing or escapes the frozen bundle']
+    record = json.loads(record_path.read_text())
+    if record.get('canonical_id') != spec.get('canonical_id'):
+        return ['source title record identity differs from execution.json']
+    title = record.get('title')
+    def compact(value):
+        return ''.join(c for c in unicodedata.normalize('NFKC', value).casefold() if c.isalnum())
+    # Short generic method names require semantic review, not a blanket ban.
+    if not isinstance(title, str) or len(compact(title)) < 24 or len(title.split()) < 4:
+        return []
+    layout = package_layout(spec)
+    paths = {package_path(package, layout[key]) for key in ('instruction_path', 'method_path')}
+    public = package_path(package, layout['public_dir'])
+    data = package_path(package, layout['data_path'])
+    paths.update(p for p in public.rglob('*') if p.is_file() and not p.is_relative_to(data)
+                 and p.suffix.lower() in {'.md', '.json', '.yaml', '.yml', '.toml', '.py', '.sh'})
+    return ['Solver-visible document exposes the complete source-paper title: '+str(p.relative_to(package))
+            for p in sorted(paths) if p.is_file() and compact(title) in compact(p.read_text(errors='replace'))]
+
+
 def source_claim_errors(package, spec, source_bundle, *, review=False):
     """Check public-science claims against the frozen Stage1 materials used by this build."""
     if source_bundle is None:
@@ -263,6 +293,7 @@ def source_claim_errors(package, spec, source_bundle, *, review=False):
                if isinstance(a, dict) and a.get('status') == 'available' and isinstance(a.get('snapshot_path'), str)}
     from catalog_bindings import catalog_copy_errors
     errors, verified = catalog_copy_errors(spec, bundle), {}
+    errors.extend(public_source_title_errors(package, spec, bundle, manifest))
     errors.extend(claim_shape_errors)
     experiments = scope.get('main_experiments', {}) if spec.get('scope_contract_version') == 3 else {}
     experiment_claims = {}
