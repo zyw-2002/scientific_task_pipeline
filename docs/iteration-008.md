@@ -121,3 +121,33 @@ conflicting format/field/count declarations still fail validation. This
 removes a Markdown-layout obstacle without inventing deliverables or changing
 scientific scope. Direct-file and archive-pattern regression checks plus the
 full suite pass (48 tests). Iteration 008 has not yet taken worker snapshots.
+
+Real execution started on 2026-11-26 at 20:27 Asia/Shanghai. Seven workers
+started immediately, with three slots reserved for the previous two Stage2
+reviews and the ongoing Iteration 006 S022 Stage3 run. When those reviews
+finished, two slots returned to the shared supervisor. The ten selected IDs
+remain unchanged. Worker snapshots use the tested Stage2 revision `dd87bfb`;
+grading-only changes below do not alter those snapshots. No candidate has been
+promoted to main.
+
+Iteration 007 is now terminal: no construction-ready package. Its preserved
+query-only rubric returned Q0=99.444 and D0=67.014 for nine collected packages
+(90% coverage). These figures neither establish a passing batch nor provide
+Stage3/T evidence. S094 passed static checks, but its reviewer kept status
+blocked solely because declared formal inputs require Stage3 preparation;
+the launcher's default execution-readiness scope also asked Stage2 to enforce
+runtime readiness. This boundary is being repaired on the next candidate,
+without changing this batch's frozen Stage2 configuration.
+
+A real retry of the long NatureBench process review returned HTTP 400 with
+`Range of input length should be [1, 983616]`. The grading client now partitions
+long behavior views into consecutive complete steps, externally extracts
+evidence-bound observations for every segment, then makes one global F1--F8
+judgment. It preserves all behavior text, audits complete step coverage,
+retains the original trajectory hash, and checks every final quote. Segment
+observations contain no point scores; recovery is judged globally rather
+than by averaging segments. A single oversized step remains explicitly
+unscored instead of being truncated. Actual string span IDs are normalized
+to the same validated pointer objects; unknown IDs still fail. The first
+segment's returned response was reused only after exact request/prompt hash
+checks. Full test suite: 51 passing. The complete real review remains running.

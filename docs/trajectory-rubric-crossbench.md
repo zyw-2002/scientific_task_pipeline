@@ -1,5 +1,10 @@
 # Cross-benchmark trajectory evidence review
 
+Historical design note. The later user-approved contract in `rubric-tqd-v1.md`
+supersedes this note's original scoring proposal: full T0 now requires both
+the 60-point execution layer and the 40-point F1--F8 process layer. The
+inventories and observations below remain engineering evidence, not grades.
+
 This note records what the existing trajectory work contributes to the
 pipeline. It is an engineering input, not a new benchmark score and does not
 send any task package or trajectory to an external Solver.

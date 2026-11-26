@@ -66,9 +66,10 @@ def checked_review(raw: Mapping, trajectory: Path, *, span_map: dict | None = No
     criteria = raw.get('criteria', {})
     for row in criteria.values() if isinstance(criteria, Mapping) else []:
         if not isinstance(row, Mapping) or not isinstance(row.get('evidence'), list): continue
-        row['evidence'] = [dict(spans[ref['span_id']], span_id=ref['span_id'])
-                           if isinstance(ref, Mapping) and ref.get('span_id') in spans else ref
-                           for ref in row['evidence']]
+        row['evidence'] = [dict(spans[identifier], span_id=identifier) if identifier in spans else ref
+                           for ref in row['evidence']
+                           for identifier in [ref if isinstance(ref, str) else
+                                              ref.get('span_id') if isinstance(ref, Mapping) else None]]
     review = {'trajectory_sha256': hashlib.sha256(trajectory.read_bytes()).hexdigest(),
               'criteria': raw.get('criteria', {})}
     accepted = _bound_semantic_scores(review, trajectory)
@@ -97,27 +98,53 @@ def _env(path):
     return values
 
 
-def score_process(*, task_spec: dict, trajectory: Path, env_file: Path,
-                  output: Path, proxy_url: str | None = None) -> dict:
-    if output.exists(): raise ValueError('refusing to overwrite final process review: '+str(output))
-    evidence = json.loads(trajectory.read_bytes())
-    if not isinstance(evidence, dict) or not isinstance(evidence.get('steps'), list):
-        raise ValueError('process review requires a parsed ATIF trajectory')
-    # Explicit whitelist: no private evaluation code/data, authoring materials,
-    # previous grades or historical scores are attached by the scorer.
-    public_roles = {'task_description', 'data_description', 'task_contract', 'provided_method', 'public_validation'}
-    documents = [{k: doc[k] for k in ('role', 'path', 'text')}
-                 for doc in task_spec['documents'] if doc.get('role') in public_roles]
-    if not documents: raise ValueError('process review requires actual public task documents')
-    projected = behavior_view(evidence)
-    spans = evidence_spans(projected)
-    payload_view = {'task': {'task_id': task_spec['task_id'], 'documents': documents,
-        'task_text': '\n\n'.join(doc['text'] for doc in documents)},
-        'trajectory': projected, 'evidence_spans': spans}
-    content = json.dumps(payload_view, ensure_ascii=False)
-    if len(content.encode()) > 8_000_000:
-        raise ValueError('trajectory review exceeds input limit; no silent truncation')
-    env = _env(env_file)
+def segment_views(projected: dict, *, max_bytes: int = 400_000) -> list[dict]:
+    """Partition complete behavior steps, with no sampling or text truncation."""
+    if max_bytes < 1:
+        raise ValueError('segment byte budget must be positive')
+    groups, current, size = [], [], 0
+    for step in projected['steps']:
+        needed = len(json.dumps(step, ensure_ascii=False).encode())
+        if needed > max_bytes:
+            raise ValueError('one trajectory step exceeds the segment budget; no silent truncation')
+        if current and size + needed > max_bytes:
+            groups.append({'steps': current})
+            current, size = [], 0
+        current.append(step)
+        size += needed
+    if current:
+        groups.append({'steps': current})
+    return groups
+
+
+def checked_segment_facts(raw: Mapping, spans: dict) -> dict:
+    """Accept only evidence-bound observations, never provisional point scores."""
+    if not isinstance(raw, Mapping) or not isinstance(raw.get('criteria'), Mapping):
+        raise ValueError('segment reviewer must return criterion observations')
+    criteria = {}
+    for name in T_PROCESS_WEIGHTS:
+        row = raw['criteria'].get(name)
+        if not isinstance(row, Mapping) or not isinstance(row.get('observations'), list):
+            raise ValueError('segment review omitted observations for '+name)
+        observations = []
+        for fact in row['observations']:
+            if (not isinstance(fact, Mapping) or not isinstance(fact.get('reason'), str)
+                    or not fact['reason'].strip() or not isinstance(fact.get('evidence'), list)
+                    or not fact['evidence']):
+                raise ValueError('segment observation needs a rationale and exact span references')
+            references = []
+            for ref in fact['evidence']:
+                identifier = ref if isinstance(ref, str) else ref.get('span_id') if isinstance(ref, Mapping) else None
+                if not isinstance(identifier, str) or identifier not in spans:
+                    raise ValueError('segment observation cites an unknown span')
+                references.append({'span_id': identifier})
+            observations.append({'reason': fact['reason'], 'evidence': references})
+        criteria[name] = {'observations': observations}
+    return {'criteria': criteria}
+
+
+def _call_judge(*, content: dict, prompt: str, env: dict, output: Path,
+                proxy_url: str | None) -> tuple[dict, dict | None]:
     endpoint = (env.get('BASE_URL') or env.get('OPENAI_BASE_URL') or '').rstrip('/')
     parsed = urlsplit(endpoint)
     if (parsed.scheme not in {'https','http'} or not parsed.hostname or parsed.username
@@ -127,18 +154,18 @@ def score_process(*, task_spec: dict, trajectory: Path, env_file: Path,
     model = env.get('MODEL_NAME') or env.get('OPENAI_MODEL')
     key = env.get('API_KEY') or env.get('OPENAI_API_KEY') or env.get('OPENROUTER_API_KEY')
     if not model or not key: raise ValueError('configure the final judge model and API credential')
-    prompt = (ROOT/'prompts/evaluation/trajectory_process_spans.md').read_text()
+    content_text = json.dumps(content, ensure_ascii=False)
     body = {'model': model, 'temperature': 0, 'response_format': {'type': 'json_object'},
-        'max_tokens': 6000, 'messages': [{'role':'system','content':prompt}, {'role':'user','content':content}]}
-    request = urllib.request.Request(endpoint, data=json.dumps(body).encode(),
+        'max_tokens': 6000, 'messages': [{'role':'system','content':prompt}, {'role':'user','content':content_text}]}
+    request = urllib.request.Request(endpoint, data=json.dumps(body, ensure_ascii=False).encode(),
         headers={'Content-Type':'application/json','Authorization':'Bearer '+key}, method='POST')
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({'http':proxy_url,'https':proxy_url})) if proxy_url else urllib.request.build_opener()
-    output.mkdir(parents=True)
-    (output/'request-identity.json').write_text(json.dumps({'task_id':task_spec['task_id'],
-        'model':model, 'trajectory_sha256':hashlib.sha256(trajectory.read_bytes()).hexdigest(),
-        'trajectory_view': 'all ATIF behavior fields; provider/usage telemetry omitted',
-        'original_step_count': len(evidence['steps']), 'transmitted_step_count': len(projected['steps']),
-        'public_view_sha256':hashlib.sha256(content.encode()).hexdigest(),
+    output.mkdir(parents=True, exist_ok=True)
+    # The archived request contains only the explicit public view and behavior;
+    # credentials are attached as transport headers and are never archived.
+    (output/'request-view.json').write_text(content_text+'\n')
+    (output/'request-identity.json').write_text(json.dumps({
+        'model':model, 'public_view_sha256':hashlib.sha256(content_text.encode()).hexdigest(),
         'prompt_sha256':hashlib.sha256(prompt.encode()).hexdigest()},indent=2)+'\n')
     transport = []
     for attempt in range(3):
@@ -147,11 +174,13 @@ def score_process(*, task_spec: dict, trajectory: Path, env_file: Path,
             break
         except urllib.error.HTTPError as exc:
             error_body = exc.read()
+            (output/f'http-error-{attempt+1}.bin').write_bytes(error_body)
             lowered = error_body.lower()
             transport.append({'attempt': attempt+1, 'http_status': exc.code,
                 'response_sha256': hashlib.sha256(error_body).hexdigest(),
                 'context_limit': any(token in lowered for token in
-                    (b'context length', b'context window', b'maximum context', b'too many tokens'))})
+                    (b'context length', b'context window', b'maximum context', b'too many tokens',
+                     b'range of input length'))})
             (output/'transport-events.json').write_text(json.dumps(transport,indent=2)+'\n')
             if exc.code != 429 or attempt == 2: raise
             try: retry_after = float(exc.headers.get('Retry-After', '0'))
@@ -160,10 +189,86 @@ def score_process(*, task_spec: dict, trajectory: Path, env_file: Path,
     (output/'api-response.json').write_bytes(data)
     envelope = json.loads(data); message = envelope['choices'][0]['message']
     if message.get('tool_calls') or message.get('function_call'): raise ValueError('judge returned forbidden tool calls')
-    raw = json.loads(message['content'])
+    return json.loads(message['content']), envelope.get('usage')
+
+
+def score_process(*, task_spec: dict, trajectory: Path, env_file: Path,
+                  output: Path, proxy_url: str | None = None,
+                  segment_bytes: int = 400_000) -> dict:
+    if output.exists(): raise ValueError('refusing to overwrite final process review: '+str(output))
+    original = trajectory.read_bytes()
+    evidence = json.loads(original)
+    if not isinstance(evidence, dict) or not isinstance(evidence.get('steps'), list):
+        raise ValueError('process review requires a parsed ATIF trajectory')
+    public_roles = {'task_description', 'data_description', 'task_contract', 'provided_method', 'public_validation'}
+    documents = [{k: doc[k] for k in ('role', 'path', 'text')}
+                 for doc in task_spec['documents'] if doc.get('role') in public_roles]
+    if not documents: raise ValueError('process review requires actual public task documents')
+    projected = behavior_view(evidence)
+    spans = evidence_spans(projected)
+    task_view = {'task_id': task_spec['task_id'], 'documents': documents}
+    payload_view = {'task': task_view, 'trajectory': projected, 'evidence_spans': spans}
+    content = json.dumps(payload_view, ensure_ascii=False)
+    if len(content.encode()) > 8_000_000:
+        raise ValueError('trajectory review exceeds input limit; no silent truncation')
+    env = _env(env_file)
+    prompt = (ROOT/'prompts/evaluation/trajectory_process_spans.md').read_text()
+    output.mkdir(parents=True)
+    segmented = len(content.encode()) > 600_000
+    identity = {'task_id': task_spec['task_id'],
+        'model': env.get('MODEL_NAME') or env.get('OPENAI_MODEL'),
+        'trajectory_sha256': hashlib.sha256(original).hexdigest(),
+        'trajectory_view': 'all ATIF behavior fields; provider/usage telemetry omitted',
+        'original_step_count': len(evidence['steps']), 'transmitted_step_count': len(projected['steps']),
+        'public_view_sha256': hashlib.sha256(content.encode()).hexdigest(),
+        'prompt_sha256': hashlib.sha256(prompt.encode()).hexdigest(),
+        'review_protocol': 'complete_segments_then_global_judgment_v1' if segmented else 'full_behavior_v1'}
+    (output/'request-identity.json').write_text(json.dumps(identity,indent=2)+'\n')
+    usages = []
+    if segmented:
+        groups = segment_views(projected, max_bytes=segment_bytes)
+        segment_prompt = (ROOT/'prompts/evaluation/trajectory_segment_evidence.md').read_text()
+        segment_facts, selected_spans, coverage = [], {}, []
+        offset = 0
+        for index, group in enumerate(groups):
+            segment_spans = evidence_spans(group)
+            view = {'task': task_view, 'trajectory_segment': group, 'evidence_spans': segment_spans,
+                    'position': {'segment_index': index, 'segment_count': len(groups),
+                                 'first_step_index': offset, 'step_count': len(group['steps']),
+                                 'total_step_count': len(projected['steps'])}}
+            directory = output/'segments'/f'{index:04d}'
+            raw, usage = _call_judge(content=view, prompt=segment_prompt, env=env,
+                                    output=directory, proxy_url=proxy_url)
+            facts = checked_segment_facts(raw, segment_spans)
+            facts['position'] = view['position']
+            (directory/'bound-facts.json').write_text(json.dumps(facts,ensure_ascii=False,indent=2)+'\n')
+            segment_facts.append(facts);usages.append(usage)
+            for row in facts['criteria'].values():
+                for fact in row['observations']:
+                    for ref in fact['evidence']:
+                        selected_spans[ref['span_id']] = segment_spans[ref['span_id']]
+            coverage.append(view['position']);offset += len(group['steps'])
+        if offset != len(projected['steps']) or trajectory.read_bytes() != original:
+            raise ValueError('trajectory changed or segment coverage is incomplete')
+        (output/'segment-coverage.json').write_text(json.dumps({
+            'trajectory_sha256': identity['trajectory_sha256'], 'covered_step_count': offset,
+            'total_step_count': len(projected['steps']), 'segments': coverage,
+            'segment_prompt_sha256': hashlib.sha256(segment_prompt.encode()).hexdigest()},indent=2)+'\n')
+        payload_view = {'task':task_view, 'chronological_segment_observations':segment_facts,
+                        'evidence_spans':selected_spans}
+        prompt += ('\nThe entire original trajectory has been reviewed in ordered complete segments. '
+                   'The attached observations are evidence extraction, not grades. Judge the whole process '
+                   'once, accounting for later recovery and cross-segment state. Do not average segments, '
+                   'deduct twice for repeated consequences, or infer success/failure from missing observations. '
+                   'Use null when the extracted evidence cannot support a criterion. Cite only supplied span IDs.\n')
+        spans = selected_spans
+    raw, usage = _call_judge(content=payload_view, prompt=prompt, env=env,
+                            output=output/'final-review', proxy_url=proxy_url)
+    if trajectory.read_bytes() != original:
+        raise ValueError('trajectory changed during process review')
     result = checked_review(raw, trajectory, span_map=spans)
-    result['usage'] = envelope.get('usage')
-    result['task_id'] = task_spec['task_id']
+    result['usage'] = usage;result['segment_usage'] = usages
+    result['task_id'] = task_spec['task_id'];result['review_protocol'] = identity['review_protocol']
     (output/'process-review.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
     return result
 
