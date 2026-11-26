@@ -9,6 +9,37 @@ from pipeline.orchestration.trajectory_quality import (T0_WEIGHTS, score_traject
 
 
 class TrajectoryQualityTests(unittest.TestCase):
+    def test_native_receipts_verify_data_and_accept_zero_metric(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            data = root/'data.json'; data.write_text('[1,2,3]')
+            manifest = root/'input.json'
+            manifest.write_text(json.dumps({'task_id': 'native', 'formal_resources_verified': True,
+                'formal_resources': [{'id': 'input', 'path': str(data),
+                    'sha256': hashlib.sha256(data.read_bytes()).hexdigest()}]}))
+            run = root/'run.json'
+            run.write_text(json.dumps({'task_id': 'native', 'diagnostic_only': False,
+                'effective_input': str(manifest),
+                'effective_input_sha256': hashlib.sha256(manifest.read_bytes()).hexdigest()}))
+            bundle = root/'bundle'; bundle.mkdir(); (bundle/'manifest.json').write_text('{}')
+            row = {'solver': {'status': 'evidence_exported'}, 'judge': {'is_valid': True},
+                'score_status': 'success', 'scientific_score': 0.0,
+                'artifacts': {'input_manifest': str(manifest), 'run_manifest': str(run),
+                    'bundle': {'path': str(bundle), 'manifest_sha256':
+                        hashlib.sha256((bundle/'manifest.json').read_bytes()).hexdigest()}}}
+            report = score_trajectory(row)
+            self.assertEqual(report['dimensions']['formal_input_use']['score'], 12)
+            self.assertEqual(report['dimensions']['data_integrity']['score'], 12)
+            self.assertEqual(report['dimensions']['validation_and_recovery']['score'], 9)
+            data.write_text('[999]')
+            report = score_trajectory(row)
+            self.assertIsNone(report['dimensions']['data_integrity']['score'])
+            (bundle/'manifest.json').write_text('{"tampered":true}')
+            report = score_trajectory(row)
+            self.assertIsNone(report['dimensions']['validation_and_recovery']['score'])
+            run.write_text('{"task_id":"different"}')
+            self.assertIsNone(score_trajectory(row)['dimensions']['formal_input_use']['score'])
+
     def test_planning_or_completion_words_are_not_execution_evidence(self):
         report = score_atif_trajectory({'steps': [{'source': 'agent',
             'message': 'Read the data, test the results, all completed and validated.'}]})

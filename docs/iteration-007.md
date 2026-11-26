@@ -57,3 +57,11 @@ trajectory SHA-256, per-criterion rationale and exact quotes from named steps;
 unbound numeric scores are unknown. Weights remain T-E=60, T-P=40. Validation
 now has 38 passing tests. This reporting fix invalidates earlier keyword-based
 partial T0 observations; it is not a change to the fixed rubric.
+
+Native T0 evidence handling was also repaired: Stage3 bundles are directories
+with a bound manifest (the previous file-only check could never recognize
+them), zero-valued scientific metrics are valid measurements, and formal input
+identity uses matching native run/input hashes. Positive data-integrity points
+require matching formal resource hashes plus a valid independent Judge; claims
+without an accepted Judge do not receive completion-support points. Tampered
+artifacts remain unknown. The full suite now has 39 passing tests.

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -38,16 +39,62 @@ T0_WEIGHTS = {**T_EVIDENCE_WEIGHTS, **T_PROCESS_WEIGHTS}
 
 
 def _path(value: Any) -> Path | None:
+    expected = None
     if isinstance(value, Mapping):
+        expected = value.get("sha256")
         value = value.get("path")
     if not isinstance(value, str) or not value:
         return None
     path = Path(value)
-    return path if path.is_file() else None
+    if not path.is_file():
+        return None
+    if expected and hashlib.sha256(path.read_bytes()).hexdigest() != expected:
+        return None
+    return path
 
 
 def _artifact(result: Mapping[str, Any], name: str) -> Path | None:
-    return _path((result.get("artifacts") or {}).get(name))
+    reference = (result.get("artifacts") or {}).get(name)
+    if name == 'bundle' and isinstance(reference, Mapping):
+        # Native Stage3 bundles are directories, not files. Their manifest is
+        # frozen and hash-bound by the workflow before final judging.
+        path = Path(reference.get('path', ''))
+        manifest = path/'manifest.json'
+        expected = reference.get('manifest_sha256')
+        if expected and manifest.is_file() and hashlib.sha256(manifest.read_bytes()).hexdigest() == expected:
+            return path
+        return None
+    return _path(reference)
+
+
+def _native_input_identity(artifacts, solver, judge):
+    """Verify existing framework receipts; do not execute task-specific code."""
+    path, run_path = artifacts['input_manifest'], artifacts['run_manifest']
+    if path is None or run_path is None or solver.get('status') != 'evidence_exported':
+        return False, False
+    try:
+        manifest, run = json.loads(path.read_bytes()), json.loads(run_path.read_bytes())
+        bound = (run.get('effective_input_sha256') == hashlib.sha256(path.read_bytes()).hexdigest()
+                 and Path(run.get('effective_input', '')).resolve() == path.resolve()
+                 and run.get('task_id') == manifest.get('task_id')
+                 and run.get('diagnostic_only') is False)
+        if not bound:
+            return False, False
+        resources = manifest.get('formal_resources')
+        if (manifest.get('formal_resources_verified') is not True or not isinstance(resources, list)
+                or not resources or judge.get('is_valid') is not True):
+            return True, False
+        from pipeline.stage2_construction.contracts.resource_contract import digest
+        ids = set()
+        for row in resources:
+            resource = Path(row['path'])
+            if (not row.get('id') or row['id'] in ids or not resource.exists()
+                    or resource.is_symlink() or digest(resource) != row.get('sha256')):
+                return True, False
+            ids.add(row['id'])
+        return True, True
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
+        return False, False
 
 
 def _bound_semantic_scores(review: Mapping[str, Any], trajectory: Path | None) -> dict[str, float]:
@@ -119,11 +166,12 @@ def score_trajectory(result: Mapping[str, Any]) -> dict[str, Any]:
         if reason:
             findings.append(reason)
 
-    input_evidence = [key for key in ("input_manifest", "run_manifest") if artifacts[key]]
-    add("formal_input_use", T_EVIDENCE_WEIGHTS["formal_input_use"] if artifacts["input_manifest"] and artifacts["run_manifest"] else None,
+    input_bound, identity_verified = _native_input_identity(artifacts, solver, judge)
+    input_evidence = ["matching native input/run identities"] if input_bound else []
+    add("formal_input_use", T_EVIDENCE_WEIGHTS["formal_input_use"] if input_bound else None,
         T_EVIDENCE_WEIGHTS["formal_input_use"], input_evidence,
-        None if artifacts["input_manifest"] and artifacts["run_manifest"] else
-        "missing frozen input/run manifest evidence", status=("observed" if artifacts["input_manifest"] and artifacts["run_manifest"] else "unknown"))
+        None if input_bound else
+        "missing frozen input/run manifest evidence", status=("observed" if input_bound else "unknown"))
 
     invalidity = reporting.get("invalidity_type") or judge.get("failure_class")
     substitution = result.get("synthetic_substitution") or result.get("placeholder_or_degenerate")
@@ -133,6 +181,9 @@ def score_trajectory(result: Mapping[str, Any]) -> dict[str, Any]:
     elif invalidity == "placeholder_or_degenerate":
         add("data_integrity", 1.0, T_EVIDENCE_WEIGHTS["data_integrity"], ["placeholder_or_degenerate"],
             "trajectory indicates placeholder or degenerate input")
+    elif identity_verified:
+        add("data_integrity", T_EVIDENCE_WEIGHTS["data_integrity"], T_EVIDENCE_WEIGHTS["data_integrity"],
+            ["formal resource SHA-256 identities verified", "independent Judge is_valid=true"])
     else:
         add("data_integrity", None, T_EVIDENCE_WEIGHTS["data_integrity"], [],
             "no positive input-identity evidence was exported", status="unknown")
@@ -149,7 +200,10 @@ def score_trajectory(result: Mapping[str, Any]) -> dict[str, Any]:
         (["evidence_exported", "run_export", "trajectory", "timeline"] if execution_ok else []),
         None if execution_ok else "trajectory lacks complete execution/export evidence", status="observed")
 
-    validation_ok = bool(result.get("scientific_score")) and bool(artifacts["bundle"])
+    scientific = result.get("scientific_score")
+    metrics = list(scientific.values()) if isinstance(scientific, Mapping) else [scientific]
+    measured = bool(metrics) and all(type(value) in (int, float) and math.isfinite(value) for value in metrics)
+    validation_ok = measured and result.get('score_status') == 'success' and bool(artifacts["bundle"])
     recovery = any(key in result for key in ("recovery", "retry_count", "recovered_after_error"))
     validation_points = T_EVIDENCE_WEIGHTS["validation_and_recovery"] if validation_ok else 0.0
     validation_evidence = ["scientific_score", "frozen evidence bundle"] if validation_ok else []
@@ -159,9 +213,9 @@ def score_trajectory(result: Mapping[str, Any]) -> dict[str, Any]:
         None if validation_ok else "missing independent validation or frozen evidence bundle",
         status=("observed" if validation_ok else "unknown"))
 
-    claim_ok = (status in {"complete", "judge_not_configured"} and
-                reporting.get("decision_status") in {"accepted", "legacy_unverified", None} and
-                bool(artifacts["run_export"]))
+    claim_ok = (status == "complete" and judge.get('is_valid') is True and
+                reporting.get("decision_status") not in {"evidence_insufficient", "rejected"} and
+                bool(artifacts["run_export"]) and bool(result.get('score_attempt_used')))
     add("claim_support", T_EVIDENCE_WEIGHTS["claim_support"] if claim_ok else None, T_EVIDENCE_WEIGHTS["claim_support"],
         (["status and exported evidence agree"] if claim_ok else []),
         None if claim_ok else "completion claim was not independently accepted",
