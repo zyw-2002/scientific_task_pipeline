@@ -30,3 +30,13 @@ workers retain their own frozen code and prompts; this candidate will execute
 as a separate batch after those construction workers finish, with concurrency
 up to ten. It is not promoted to main without complete comparable Q/D/T and
 real Stage3 evidence.
+
+The final T-P/F1--F8 scoring client is now implemented as
+`pipeline.orchestration.semantic_scoring`. It sends only explicitly public
+document roles and trajectory steps, excludes previous aggregate scores and
+private evaluation material, and rejects silent input truncation or model tool
+calls. The model output is checked against the original trajectory SHA-256
+and exact per-step quotes before points contribute. Requests/responses and
+prompt/input identities are archived outside tracked source. A real final
+process review of the corrected NatureBench sample has been started; malformed
+or unbound evidence remains unknown. All 41 tests pass.

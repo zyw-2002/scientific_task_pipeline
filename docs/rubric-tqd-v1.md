@@ -107,3 +107,10 @@ For T-P, each `semantic_review.criteria` entry contains `score`, `reason` and
 trajectory with `trajectory_sha256`. Numeric scores without this binding are
 unknown. This tightens evidence validation while preserving all dimensions
 and weights above.
+
+The text-only final semantic scorer can be run with
+`python3 -m pipeline.orchestration.semantic_scoring --task-specs <public-specs.jsonl>
+--task-id <id> --trajectory <ATIF.json> --env-file <local.env> --output <new-directory>`.
+Its 40-point process score is separate from the 60-point native mechanical
+evidence. External traces lacking native input/contract evidence retain an
+incomplete total T0 even when all eight process criteria are reviewed.

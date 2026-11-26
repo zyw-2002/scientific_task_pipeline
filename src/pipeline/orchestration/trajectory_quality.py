@@ -126,7 +126,8 @@ def _bound_semantic_scores(review: Mapping[str, Any], trajectory: Path | None) -
         row = criteria.get(name)
         if not isinstance(row, Mapping): continue
         score, evidence = row.get("score"), row.get("evidence")
-        if type(score) not in (int, float) or not 1 <= score <= 5 or not row.get("reason"):
+        if (type(score) not in (int, float) or not 1 <= score <= 5
+                or not isinstance(row.get("reason"), str) or not row["reason"].strip()):
             continue
         if not isinstance(evidence, list) or not evidence:
             continue
