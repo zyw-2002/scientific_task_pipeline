@@ -212,7 +212,39 @@ def initialize_review(package: Path) -> bool:
         if spec['scope_contract_version'] == 3:
             report['scientific_checks']['scope_fidelity']['main_experiments'] = {}
     if spec.get('scope_contract_version') in (2, 3):
-        report['construction_audit'] = {}
+        # Transcribe the ABI and declared IDs, never the reviewer's judgments.
+        # Empty evidence/rationale and not_reviewed verdicts keep this template
+        # incomplete. A reviewer must inspect the source and execute controls.
+        from contract import package_layout, package_path
+        protocol = json.loads((package / 'common_task/evaluation/protocol.json').read_text())
+        requirements = protocol.get('assessment', {}).get('requirements', [])
+        core = [r['id'] for r in requirements if r.get('role') in {'quality', 'trajectory'}]
+        resources = [r for r in spec.get('data', {}).get('sources', [])
+                     if r.get('role') in {'input', 'reference'}]
+        layout = package_layout(spec)
+        documents = [layout[k] for k in ('instruction_path', 'readme_path',
+                                         'data_description_path', 'data_sources_path')
+                     if package_path(package, layout[k]).is_file()]
+        report['construction_audit'] = {
+            'input_sha256': {},
+            'public_documents': {name: {'verdict': 'not_reviewed', 'claims': [], 'rationale': ''}
+                                 for name in documents},
+            'scope_decisions': [{'resource_ids': [r['id'] for r in resources],
+                                 'requirement_ids': core, 'retained_capability': '',
+                                 'removed_capability': '', 'justification': '',
+                                 'difficulty_effect': '', 'source_evidence': [],
+                                 'verdict': 'not_reviewed'}],
+            'data_paths': [dict(resource_id=r['id'], content=r['content'],
+                                availability=r['availability'],
+                                prepare_command=r.get('prepare', {}).get('command', []),
+                                validate_command=r.get('prepare', {}).get('validate', []),
+                                consistency_reason='', missing_data_behavior='',
+                                code_evidence=[], extent_check='', extent_evidence=[],
+                                verdict='not_reviewed') for r in resources],
+            'shortcut_checks': [dict(requirement_ids=[rid], mechanism='', reason='',
+                                     code_evidence=[], disposition='', case_id=None)
+                                for rid in core],
+        }
     if spec.get('paper_comparison_version') == 1:
         report['scientific_checks']['paper_comparison'] = {'status': 'not_run'}
     if spec.get('canonical_id'):

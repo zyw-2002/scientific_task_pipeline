@@ -427,6 +427,19 @@ def _normalize_scoring_smoke_config(package, spec):
     for case in cases:
         if not isinstance(case, dict):
             continue
+        # Older authoring workers commonly emit ``submission`` as
+        # ``{"path": "fixtures/file.csv"}``, while the smoke ABI expects
+        # the path string itself.  Normalize this before inspect_config sees
+        # the case; otherwise a valid relative fixture is passed to ``_file``
+        # as a mapping and is reported as a misleading absolute/relative-path
+        # error.  This is a framework vocabulary repair, independent of any
+        # task's scientific content.
+        submission = case.get('submission')
+        if isinstance(submission, dict):
+            submission_path = submission.get('path') or submission.get('file')
+            if isinstance(submission_path, str) and submission_path.strip():
+                case['submission'] = submission_path
+                changed.append(f'scoring smoke submission path normalized for {case.get("id", "unknown")}')
         source = case.pop('submission_fixture', None)
         if source is None and isinstance(case.get('submission'), str) and Path(case['submission']).is_absolute():
             source = case['submission']
@@ -910,8 +923,11 @@ def with_solver_bindings(instruction, contract):
     if evaluation.get('public_validation'):
         lines.append('Run `evaluation.public_validation.baseline_command` and then '
                      '`evaluation.public_validation.command` from the contract to obtain a public score.')
-    lines.extend([f"The verifier runs the argv in `evaluation.command` on service `{evaluation['service']}`.",
-                  f"Success condition: {evaluation['success_condition']}.", end])
+    if evaluation.get('mode') == 'automatic_private_verifier':
+        lines.append('Automatic private verification runs after submission; the formal scorer is not a Solver command.')
+    else:
+        lines.append(f"The verifier runs the argv in `evaluation.command` on service `{evaluation['service']}`.")
+    lines.extend([f"Success condition: {evaluation['success_condition']}.", end])
     block = '\n'.join(lines)
     existing = None
     if begin in instruction or end in instruction:

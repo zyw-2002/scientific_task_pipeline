@@ -28,9 +28,32 @@ Stage2 is run with up to ten concurrent workers. Stage3 and external QTD/T0
 scoring remain gated on actual `construction_ready` evidence; unavailable
 scientific or trajectory scores stay null.
 
-At execution time, the local automatic review rejected the ten-worker launch
-because this configuration sends private source bundles and authenticated
-authoring interactions to the public Qwen endpoint. The command was not
-rerouted or bypassed, and no Iteration 006 Stage2/Stage3 score is claimed.
-The committed revision is ready to run once the endpoint boundary is explicitly
-resolved.
+The earlier automatic-review egress block was resolved by the user's explicit
+Stage2 authorization on 2026-11-26. The real batch completed using the frozen
+revision `756bf4e`, the recorded ten task IDs, and the local image
+`orginalbench:trajectory-qwen0251-v1`. Each task had up to two construction
+attempts and one independent review attempt. Final Stage2 results:
+
+- 1/10 construction-ready: S022, after real independent review.
+- 8/10 blocked by construction/review evidence; S005 passed static construction
+  checks but its independent review failed with 83 validation findings.
+- 1/10 failed Harbor trial: S034; its scientific score is unknown.
+
+S022 entered the real Stage3 workflow with the existing image, public-resource
+preparation, Blind Solver, and the configured final judge. Its scientific score
+and T0 remain pending until execution and judging complete. The other nine
+have no new Stage3 trajectory. See runtime `stage2-summary.json` for check IDs,
+review errors, and package paths; no case was replaced.
+
+The preserved external Q/D rubric ran twice per collected public task package.
+The nine packages received **Q0=99.583, D0=64.722** (3 review-required). S034
+produced no collected package and remains unscored. These are query-only scores
+with 9/10 coverage, **not** a passing ten-task batch. They are not directly
+comparable to the previous fixed batch's Q0=93.25/D0=72.59, and the high Q0
+does not override construction or runtime failures. No promotion is justified.
+
+Candidate fixes discovered while reviewing the actual trajectories are kept on
+`iteration-007-public-evaluation-review`. In particular the previously
+advertised relative evaluator command is replaced with an honest automatic
+private-verification interface; no inaccessible command is described as
+callable by the Solver.

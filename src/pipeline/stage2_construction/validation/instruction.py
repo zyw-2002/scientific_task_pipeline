@@ -243,7 +243,7 @@ def _declared_command_errors(lines, runtime, evaluation):
                 if expected and len(argv) == 2 and argv[1:] == expected[1:2]:
                     continue
             else:
-                expected = evaluation['command']
+                expected = evaluation.get('command', [])
             if argv != expected:
                 errors.append(f'instruction has conflicting {label}: {command}')
     return errors
@@ -291,7 +291,10 @@ def solver_contract_errors(markdown: str, contract: dict[str, Any] | None) -> li
         binding = re.match(r'^\s*[-*|\s]*(?:submission path|submit(?: to)?)\s*[*:|= `]*(/[^`\s|)]+)', line, re.I)
         if binding and outputs and binding[1].rstrip('.,:') not in outputs:
             errors.append(f'instruction has conflicting submission path: {binding[1]}')
-    if 'evaluation.command' not in visible:
+    if evaluation.get('mode') == 'automatic_private_verifier':
+        if not re.search(r'(?i)automatic\s+(?:private\s+)?verif(?:ication|ier)', visible):
+            errors.append('instruction must describe automatic private verification after submission')
+    elif 'evaluation.command' not in visible:
         argv = evaluation['command']
         if not any(all(word in row for word in argv) for row in lines):
             errors.append('instruction must give the formal argv or reference task_contract.json evaluation.command')
@@ -344,7 +347,7 @@ def validate_instruction(markdown: str, config: dict[str, Any], protocol: dict |
             'DATA_DIR': r'(?i)\bDATA_DIR\b',
             'OUTPUT_DIR': r'(?i)\bOUTPUT_DIR\b',
             'runtime entrypoint': r'(?i)python\s+/workspace/run\.py',
-            'evaluator command': r'(?i)(?:evaluation\.command|scoring_entry\.py|evaluation_protocol\.py|test\.sh|verifier\.py)',
+            'evaluator command': r'(?i)(?:automatic\s+(?:private\s+)?verif(?:ication|ier)|evaluation\.command|scoring_entry\.py|evaluation_protocol\.py|test\.sh|verifier\.py)',
             'success condition': r'(?i)(?:success condition|status\s*=\s*success|successful evaluation)',
             'required/optional': r'(?i)(?:required|optional)',
         }
@@ -355,7 +358,7 @@ def validate_instruction(markdown: str, config: dict[str, Any], protocol: dict |
         if not input_section.strip() or not re.search(r'(?i)(path|purpose|format|field|schema)', input_section):
             errors.append('instruction Input must state each input path, purpose, format and fields')
         evaluation_section = '\n'.join(body for title, body in sections if title == 'Evaluation')
-        if not re.search(r'(?i)(command|invoke|run|python)', evaluation_section):
+        if not re.search(r'(?i)(automatic\s+(?:private\s+)?verif(?:ication|ier)|command|invoke|run|python)', evaluation_section):
             errors.append('instruction Evaluation must state how to invoke the evaluator')
     if protocol is not None:
         evaluation = '\n'.join(body for title, body in sections if title == 'Evaluation')

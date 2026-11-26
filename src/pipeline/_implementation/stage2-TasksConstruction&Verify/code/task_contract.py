@@ -11,7 +11,7 @@ from urllib.parse import urlsplit
 from contract import atomic_write_json, package_layout, package_path
 from resource_contract import file_manifest_valid, has_payload, valid_digest
 
-SCHEMA_VERSION = 'solver-task-contract-v1'
+SCHEMA_VERSION = 'solver-task-contract-v2'
 SOLVER_WORKDIR = '/workspace'
 SOLVER_SCRIPT = '/workspace/run.py'
 
@@ -403,17 +403,11 @@ def build_contract(package, spec, protocol, task):
     metric = protocol['reward_metric']
     runtime = spec['runtime']
     output_dir = str(PurePosixPath(submission['path']).parent)
-    # ``task_contract.json`` is mounted in the Solver-visible problem tree.
-    # The collector command and evidence root are private evaluator details
-    # (normally under ``/task/evaluation``); publishing them creates an
-    # information leak and makes otherwise valid packages fail the boundary
-    # gate.  Keep the public contract executable-looking and stable while the
-    # actual collector remains in execution.json/tests and is used by the
-    # Harbor evaluator.  Relative paths also keep the contract portable.
-    evaluation = dict(service=evidence['service'], command=['python', 'evaluation_protocol.py'],
+    # Formal scoring runs in the private verifier service after submission.
+    # Do not advertise an inaccessible command as a Solver entrypoint.
+    evaluation = dict(mode='automatic_private_verifier',
                       metric=metric, direction=protocol['reward_direction'],
-                      success_condition=f'Exit code 0, status=success, finite {metric} and finite reward',
-                      attempt_index='last_attempt.json')
+                      success_condition=f'Exit code 0, status=success, finite {metric} and finite reward')
     validation = spec['verification'].get('public_validation')
     if isinstance(validation, dict):
         evaluation['public_validation'] = {k: validation[k] for k in (
@@ -433,7 +427,7 @@ def build_contract(package, spec, protocol, task):
 
 
 def contract_errors(contract):
-    if not isinstance(contract, dict) or contract.get('schema_version') != SCHEMA_VERSION:
+    if not isinstance(contract, dict) or contract.get('schema_version') not in {SCHEMA_VERSION, 'solver-task-contract-v1'}:
         return ['unsupported solver contract schema']
     errors = []
     for key in ('inputs', 'outputs'):
@@ -459,9 +453,16 @@ def contract_errors(contract):
             paths.add(str(path))
             ids.add(str(identifier))
     evaluation = contract.get('evaluation')
-    if not isinstance(evaluation, dict) or not isinstance(evaluation.get('command'), list) or not evaluation['command'] or not all(
-            isinstance(arg, str) and arg for arg in evaluation['command']) or not evaluation.get('metric') or not evaluation.get('success_condition'):
-        errors.append('missing evaluator invocation, metric or success condition')
+    if not isinstance(evaluation, dict) or not evaluation.get('metric') or not evaluation.get('success_condition'):
+        errors.append('missing evaluator metric or success condition')
+    elif contract.get('schema_version') == SCHEMA_VERSION:
+        if evaluation.get('mode') != 'automatic_private_verifier':
+            errors.append('formal evaluation must identify automatic private verification')
+        if any(key in evaluation for key in ('command', 'attempt_index', 'service')):
+            errors.append('public contract must omit private evaluator command and evidence paths')
+    elif (not isinstance(evaluation.get('command'), list) or not evaluation['command']
+          or not all(isinstance(arg, str) and arg for arg in evaluation['command'])):
+        errors.append('missing legacy evaluator invocation')
     runtime = contract.get('runtime', {})
     if not isinstance(runtime, dict) or not all(runtime.get(k) for k in ('data_dir', 'output_dir', 'DATA_DIR', 'OUTPUT_DIR', 'working_dir', 'entrypoint')):
         errors.append('missing solver runtime bindings')
