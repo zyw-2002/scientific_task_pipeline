@@ -13,7 +13,7 @@ import tomllib
 import yaml
 from contract import atomic_write_json, package_layout, package_manifest, package_path, sha256_file, load_execution, save_execution, validate_execution
 from evaluation_protocol import bind_submission, config_errors
-from instruction_checks import _visible_lines, expected_public_facts, parse_sections, section_heading_line
+from instruction_checks import _artifact_rows, _visible_lines, expected_public_facts, parse_sections, section_heading_line
 from task_contract import build_contract, contract_errors, write_contract, submission_location_errors, SOLVER_WORKDIR
 from compose_runtime import rename_service, normalize_exec_worker, service_reference_errors, verifier_compose_document
 
@@ -885,7 +885,18 @@ def with_runtime_facts(instruction, spec):
 
 def with_output_table(instruction, spec):
     if '<!-- output artifacts -->' not in instruction and '<!-- end output artifacts -->' not in instruction:
-        return instruction
+        # A worker may preserve the output prose but omit the scaffold marker.
+        # Publish the already-declared ABI instead of requiring the worker to
+        # recreate a particular Markdown layout. Never replace authored tables:
+        # their missing/conflicting rows must still be validated normally.
+        if _artifact_rows(parse_sections(instruction)):
+            return instruction
+        position = section_heading_line(instruction, 'Output')
+        if position is None:
+            return instruction
+        source_lines = instruction.splitlines(keepends=True)
+        source_lines.insert(position + 1, '\n<!-- output artifacts -->\n')
+        instruction = ''.join(source_lines)
     rows = []
     submission = spec['submission']
     for item in submission.get('required_artifacts', []):

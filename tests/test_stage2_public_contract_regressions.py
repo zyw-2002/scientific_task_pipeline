@@ -9,11 +9,34 @@ from pipeline._legacy_loader import STAGE2_ROOT, implementation_paths, load_file
 with implementation_paths(stage=2):
     from pipeline.stage2_construction.contracts import task_contract
 from pipeline.stage2_construction.validation.instruction import (
-    solver_contract_errors, solver_visible_leakage_errors,
+    solver_contract_errors, solver_visible_leakage_errors, parse_sections, _artifact_errors,
 )
 
 
 class PublicContractRegressionTests(unittest.TestCase):
+    def test_missing_deliverable_slot_is_generated_from_the_actual_contract(self):
+        generator = load_file(STAGE2_ROOT/'code/framework_generator.py', '_output_table_generator', stage=2)
+        for artifacts in [
+                [{'id': 'result', 'paths': ['{submission}'], 'format': 'csv', 'columns': ['id', 'prediction']}],
+                [{'id': 'models', 'pattern': 'models/*.json', 'count': 3, 'format': 'json',
+                  'json_required_keys': ['coefficients']}]]:
+            spec = {'submission': {'path': '/workspace/output/result.zip', 'required_artifacts': artifacts}}
+            text = '## Output\n\nKeep this scientific deliverable explanation.\n\n## Constraints\n\nKeep these constraints.\n'
+            rendered = generator.with_output_table(text, spec)
+            self.assertIn('Keep this scientific deliverable explanation.', rendered)
+            self.assertIn('Keep these constraints.', rendered)
+            self.assertEqual(_artifact_errors(parse_sections(rendered), spec), [])
+            self.assertEqual(generator.with_output_table(rendered, spec), rendered)
+
+    def test_authored_conflicting_output_tables_remain_visible_to_validation(self):
+        generator = load_file(STAGE2_ROOT/'code/framework_generator.py', '_output_conflict_generator', stage=2)
+        spec = {'submission': {'path': '/workspace/output/result.csv', 'required_artifacts': [
+            {'id': 'result', 'paths': ['{submission}'], 'format': 'csv', 'columns': ['id', 'prediction']}]}}
+        text = ('## Output\n\n| File or pattern | Count | Format | Fields |\n| --- | --- | --- | --- |\n'
+                '| /workspace/output/result.csv | 1 | json | wrong |\n')
+        self.assertEqual(generator.with_output_table(text, spec), text)
+        self.assertTrue(_artifact_errors(parse_sections(text), spec))
+
     def test_generated_public_manifest_omits_private_resource_metadata(self):
         generator = load_file(STAGE2_ROOT/'code/framework_generator.py', '_public_manifest_generator', stage=2)
         with tempfile.TemporaryDirectory() as tmp:

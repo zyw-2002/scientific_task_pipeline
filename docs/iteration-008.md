@@ -108,3 +108,16 @@ packages and evidence remain unchanged. Regression and full suite: 46 pass.
 This candidate fix precedes Iteration 008 worker snapshots; Iteration 007
 continues with its frozen program. It does not reinterpret runtime errors as
 valid rejections or remove any independent correctness controls.
+
+Inspection of the actual S013 repair trace shows repeated attempts to remove
+the generated `Submit` bullet to cure a deliverables-table error. The validator
+actually found zero canonical artifact-table rows: the worker had replaced the
+scaffold with a two-column prose table. The same symptom occurred in five
+completed packages. Framework generation now inserts its output-table slot
+under an existing Output heading when neither a slot nor a canonical table
+exists, then renders only already-declared submission artifacts. Authored
+scientific prose remains intact. Existing canonical tables are preserved and
+conflicting format/field/count declarations still fail validation. This
+removes a Markdown-layout obstacle without inventing deliverables or changing
+scientific scope. Direct-file and archive-pattern regression checks plus the
+full suite pass (48 tests). Iteration 008 has not yet taken worker snapshots.
