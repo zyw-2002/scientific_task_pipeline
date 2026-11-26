@@ -21,6 +21,10 @@ from pipeline.orchestration.trajectory_quality import T_PROCESS_WEIGHTS, _bound_
 ROOT = Path(__file__).resolve().parents[3]
 
 
+class JudgeQuotaExhausted(RuntimeError):
+    """External grading cannot continue until the existing quota is restored."""
+
+
 def behavior_view(trajectory: dict) -> dict:
     """Keep all ATIF behavior text; omit duplicate provider/usage telemetry."""
     steps = []
@@ -212,12 +216,16 @@ def _call_judge(*, content: dict, prompt: str, env: dict, output: Path,
             error_body = exc.read()
             (output/f'http-error-{attempt+1}.bin').write_bytes(error_body)
             lowered = error_body.lower()
+            quota_exhausted = b'insufficient_quota' in lowered or b'allocated quota exceeded' in lowered
             transport.append({'attempt': attempt+1, 'http_status': exc.code,
                 'response_sha256': hashlib.sha256(error_body).hexdigest(),
+                'quota_exhausted': quota_exhausted,
                 'context_limit': any(token in lowered for token in
                     (b'context length', b'context window', b'maximum context', b'too many tokens',
                      b'range of input length'))})
             (output/'transport-events.json').write_text(json.dumps(transport,indent=2)+'\n')
+            if quota_exhausted:
+                raise JudgeQuotaExhausted('insufficient_quota: final grading endpoint workspace quota exhausted; no score produced') from exc
             if exc.code != 429 or attempt == 2: raise
             try: retry_after = float(exc.headers.get('Retry-After', '0'))
             except (ValueError, TypeError): retry_after = 0

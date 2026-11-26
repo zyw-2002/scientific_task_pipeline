@@ -268,7 +268,7 @@ def score_summary(rows: Iterable[Mapping[str, Any]], *, target: float = 90.0,
         scoreable = score is not None and valid is not False and status not in {"blocked", "data_unavailable", "partial"}
         if score_kind == "trajectory" and coverage is not None and coverage != 1:
             scoreable = False
-        records.append({"task_id": row.get("task_id") or row.get("sample_id"), "score": score,
+        records.append({"task_id": row.get("sample_id") or row.get("task_id"), "score": score,
                         "score_kind": score_kind,
                         "observed_score": observed_score if score_kind == "trajectory" else None,
                         "coverage": coverage if score_kind == "trajectory" else None,
