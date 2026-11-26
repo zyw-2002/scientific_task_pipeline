@@ -24,6 +24,20 @@ class IterationControlTests(unittest.TestCase):
         self.assertEqual(result["preflight"]["downloadable"], 1)
         self.assertEqual(result["preflight"]["blocked"], 1)
 
+    def test_preflight_recovers_from_stale_historical_path(self):
+        with tempfile.TemporaryDirectory() as temp:
+            candidate = Path(temp) / "candidate"
+            candidate.mkdir()
+            (candidate / "instruction.md").write_text("task")
+            (candidate / "task.toml").write_text("task = {}")
+            result = add_preflight({"tasks": [{
+                "task_id": "S003",
+                "task_path": str(Path(temp) / "missing-history"),
+                "task_definition_candidates": [{"path": str(candidate)}],
+            }]})
+            self.assertEqual(result["tasks"][0]["readiness_status"], "partial")
+            self.assertEqual(result["tasks"][0]["readiness_evidence"]["candidate_paths_considered"], [str(candidate.resolve())])
+
     def test_score_summary_does_not_turn_unavailable_into_zero(self):
         result = score_summary([{"task_id": "S001", "scientific_score": 100, "is_valid": True, "status": "complete"},
                                 {"task_id": "S002", "status": "data_unavailable"}])

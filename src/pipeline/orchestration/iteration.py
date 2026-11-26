@@ -118,6 +118,29 @@ def _path_value(row: Mapping[str, Any]) -> Path | None:
     return None
 
 
+def _candidate_paths(row: Mapping[str, Any]) -> list[Path]:
+    """Collect recoverable task-definition candidates without trusting them as ready packages."""
+    values: list[str] = []
+    candidates = row.get("task_definition_candidates")
+    if isinstance(candidates, list):
+        for candidate in candidates:
+            if isinstance(candidate, Mapping) and candidate.get("path"):
+                values.append(str(candidate["path"]))
+    for key in ("candidate_path", "historical_task_path"):
+        if row.get(key):
+            values.append(str(row[key]))
+    result = []
+    seen = set()
+    for value in values:
+        path = Path(value).expanduser()
+        if str(path) in seen:
+            continue
+        seen.add(str(path))
+        if path.is_dir() and (path / "instruction.md").is_file() and (path / "task.toml").is_file():
+            result.append(path)
+    return result
+
+
 def _instruction_urls(package: Path | None) -> list[str]:
     if not package:
         return []
@@ -142,6 +165,12 @@ def _instruction_urls(package: Path | None) -> list[str]:
 def preflight_task(row: Mapping[str, Any]) -> dict[str, Any]:
     """Classify evidence without claiming that files are scientifically complete."""
     package = _path_value(row)
+    candidate_paths = _candidate_paths(row)
+    if (package is None or not package.is_dir()) and candidate_paths:
+        # A stale historical path should not erase a locally synchronized
+        # candidate. Candidate content is still only partial until data and
+        # evaluator evidence are checked below.
+        package = candidate_paths[0]
     sources = row.get("data_urls") or row.get("source_urls") or row.get("urls") or []
     if isinstance(sources, str):
         sources = [sources]
@@ -151,6 +180,7 @@ def preflight_task(row: Mapping[str, Any]) -> dict[str, Any]:
             sources.append(source)
     evidence = {
         "package_path": str(package.resolve()) if package and package.exists() else str(package) if package else None,
+        "candidate_paths_considered": [str(path.resolve()) for path in candidate_paths],
         "required_files": {},
         "data_evidence": "unknown",
         "source_urls": sources,
