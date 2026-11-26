@@ -27,3 +27,10 @@ The selection and post-selection readiness evidence are in
 Stage2 is run with up to ten concurrent workers. Stage3 and external QTD/T0
 scoring remain gated on actual `construction_ready` evidence; unavailable
 scientific or trajectory scores stay null.
+
+At execution time, the local automatic review rejected the ten-worker launch
+because this configuration sends private source bundles and authenticated
+authoring interactions to the public Qwen endpoint. The command was not
+rerouted or bypassed, and no Iteration 006 Stage2/Stage3 score is claimed.
+The committed revision is ready to run once the endpoint boundary is explicitly
+resolved.
