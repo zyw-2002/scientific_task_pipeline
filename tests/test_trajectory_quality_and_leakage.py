@@ -1,10 +1,15 @@
 import unittest
 from pathlib import Path
 
-from pipeline.orchestration.trajectory_quality import score_trajectory, score_atif_trajectory, summarize_semantic_review
+from pipeline.orchestration.trajectory_quality import (T0_WEIGHTS, score_trajectory,
+    score_atif_trajectory, summarize_semantic_review)
 
 
 class TrajectoryQualityTests(unittest.TestCase):
+    def test_tqd_v1_trajectory_weights_are_fixed(self):
+        self.assertEqual(sum(T0_WEIGHTS.values()), 100.0)
+        self.assertEqual(len(T0_WEIGHTS), 14)
+
     def test_t0_is_separate_and_penalizes_missing_execution_evidence(self):
         report = score_trajectory({'status': 'solver_failed', 'solver': {'status': 'failed'},
                                    'judge': {'failure_class': 'engineering_failure'}})

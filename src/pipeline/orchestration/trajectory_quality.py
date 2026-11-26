@@ -11,6 +11,30 @@ from pathlib import Path
 from typing import Any, Mapping
 
 
+# T0-v1 has two distinct layers.  Mechanical execution evidence is 60 points;
+# semantic process review is 40 points.  F1--F8 are positive process criteria
+# here, while the historical labels remain available as issue diagnostics.
+T_EVIDENCE_WEIGHTS = {
+    "formal_input_use": 12.0,
+    "data_integrity": 12.0,
+    "contract_adherence": 9.0,
+    "real_execution": 12.0,
+    "validation_and_recovery": 9.0,
+    "claim_support": 6.0,
+}
+T_PROCESS_WEIGHTS = {
+    "goal_constraint_adherence": 5.0,       # F1
+    "strategy_choice": 5.0,                # F2
+    "tool_interface_use": 5.0,             # F3
+    "data_resource_identity": 5.0,         # F4
+    "implementation_computation": 5.0,     # F5
+    "observation_evidence": 5.0,           # F6
+    "context_state_maintenance": 5.0,      # F7
+    "process_control_termination": 5.0,    # F8
+}
+T0_WEIGHTS = {**T_EVIDENCE_WEIGHTS, **T_PROCESS_WEIGHTS}
+
+
 def _path(value: Any) -> Path | None:
     if isinstance(value, Mapping):
         value = value.get("path")
@@ -49,52 +73,65 @@ def score_trajectory(result: Mapping[str, Any]) -> dict[str, Any]:
             findings.append(reason)
 
     input_evidence = [key for key in ("input_manifest", "run_manifest") if artifacts[key]]
-    add("formal_input_use", 20.0 if artifacts["input_manifest"] and artifacts["run_manifest"] else None,
-        20.0, input_evidence,
+    add("formal_input_use", T_EVIDENCE_WEIGHTS["formal_input_use"] if artifacts["input_manifest"] and artifacts["run_manifest"] else None,
+        T_EVIDENCE_WEIGHTS["formal_input_use"], input_evidence,
         None if artifacts["input_manifest"] and artifacts["run_manifest"] else
         "missing frozen input/run manifest evidence", status=("observed" if artifacts["input_manifest"] and artifacts["run_manifest"] else "unknown"))
 
     invalidity = reporting.get("invalidity_type") or judge.get("failure_class")
     substitution = result.get("synthetic_substitution") or result.get("placeholder_or_degenerate")
     if invalidity == "synthetic_substitution" or substitution:
-        add("data_integrity", 0.0, 20.0, ["synthetic_substitution"],
+        add("data_integrity", 0.0, T_EVIDENCE_WEIGHTS["data_integrity"], ["synthetic_substitution"],
             "trajectory indicates synthetic or substituted input")
     elif invalidity == "placeholder_or_degenerate":
-        add("data_integrity", 4.0, 20.0, ["placeholder_or_degenerate"],
+        add("data_integrity", 1.0, T_EVIDENCE_WEIGHTS["data_integrity"], ["placeholder_or_degenerate"],
             "trajectory indicates placeholder or degenerate input")
     else:
-        add("data_integrity", None, 20.0, [],
+        add("data_integrity", None, T_EVIDENCE_WEIGHTS["data_integrity"], [],
             "no positive input-identity evidence was exported", status="unknown")
 
     contract_ok = rules.get("status") in {"pass", "legacy_not_recorded"} and bool(result.get("score_attempt_used"))
     contract_checked = bool(rules) or bool(result.get("score_attempt_used"))
-    add("contract_adherence", 15.0 if contract_ok else (0.0 if contract_checked else None), 15.0,
+    add("contract_adherence", T_EVIDENCE_WEIGHTS["contract_adherence"] if contract_ok else (0.0 if contract_checked else None), T_EVIDENCE_WEIGHTS["contract_adherence"],
         (["rules=pass", "SCORE_ATTEMPT"] if contract_ok else []),
         None if contract_ok else "missing passing output contract or SCORE_ATTEMPT evidence",
         status=("observed" if contract_checked else "unknown"))
 
     execution_ok = solver.get("status") == "evidence_exported" and artifacts["run_export"] and artifacts["trajectory"] and artifacts["timeline"]
-    add("real_execution", 20.0 if execution_ok else 0.0, 20.0,
+    add("real_execution", T_EVIDENCE_WEIGHTS["real_execution"] if execution_ok else 0.0, T_EVIDENCE_WEIGHTS["real_execution"],
         (["evidence_exported", "run_export", "trajectory", "timeline"] if execution_ok else []),
         None if execution_ok else "trajectory lacks complete execution/export evidence", status="observed")
 
     validation_ok = bool(result.get("scientific_score")) and bool(artifacts["bundle"])
     recovery = any(key in result for key in ("recovery", "retry_count", "recovered_after_error"))
-    validation_points = 15.0 if validation_ok else 0.0
+    validation_points = T_EVIDENCE_WEIGHTS["validation_and_recovery"] if validation_ok else 0.0
     validation_evidence = ["scientific_score", "frozen evidence bundle"] if validation_ok else []
     if recovery:
         validation_evidence.append("recovery metadata")
-    add("validation_and_recovery", validation_points if validation_ok else None, 15.0, validation_evidence,
+    add("validation_and_recovery", validation_points if validation_ok else None, T_EVIDENCE_WEIGHTS["validation_and_recovery"], validation_evidence,
         None if validation_ok else "missing independent validation or frozen evidence bundle",
         status=("observed" if validation_ok else "unknown"))
 
     claim_ok = (status in {"complete", "judge_not_configured"} and
                 reporting.get("decision_status") in {"accepted", "legacy_unverified", None} and
                 bool(artifacts["run_export"]))
-    add("claim_support", 10.0 if claim_ok else None, 10.0,
+    add("claim_support", T_EVIDENCE_WEIGHTS["claim_support"] if claim_ok else None, T_EVIDENCE_WEIGHTS["claim_support"],
         (["status and exported evidence agree"] if claim_ok else []),
         None if claim_ok else "completion claim was not independently accepted",
         status=("observed" if claim_ok else "unknown"))
+
+    # Semantic process scores are accepted only when an explicit review binds
+    # each criterion to trajectory evidence.  Issue counts alone cannot imply
+    # a score, and absent observations remain unknown.
+    semantic = result.get("semantic_review") if isinstance(result.get("semantic_review"), Mapping) else {}
+    semantic_scores = semantic.get("scores") if isinstance(semantic.get("scores"), Mapping) else {}
+    for name, maximum in T_PROCESS_WEIGHTS.items():
+        value = semantic_scores.get(name)
+        valid = isinstance(value, (int, float)) and 1 <= value <= 5
+        add(name, float(value) if valid else None, maximum,
+            [f"semantic_review.scores.{name}"] if valid else [],
+            None if valid else f"semantic process dimension {name} has no bound score",
+            status=("observed" if valid else "unknown"))
 
     observed = [item for item in dimensions.values() if item["status"] == "observed" and item["score"] is not None]
     score = sum(item["score"] for item in observed)
@@ -115,7 +152,7 @@ def score_trajectory(result: Mapping[str, Any]) -> dict[str, Any]:
         "evidence_count": evidence_count,
         "findings": findings,
         "assessed": bool(artifacts["run_manifest"] or artifacts["run_export"]),
-        "policy": "observable execution evidence only; independent of Q0 task quality and scientific metric",
+        "policy": "T0-v1: 60-point mechanical evidence layer plus 40-point evidence-bound semantic process layer; unknowns are not zero-filled",
     }
 
 
@@ -186,22 +223,28 @@ def score_atif_trajectory(trajectory: Mapping[str, Any], outcome: Mapping[str, A
     validation = any(token in text + tool_text for token in ("validate", "evaluation", "evaluator", "test", "checksum", "sha256", "metric"))
     input_read = any(token in text + tool_text for token in ("read", "load", "open", "ls", "find", "cat", "data"))
     dimensions = {
-        "formal_input_use": {"score": 12.0 if input_read else None, "max": 20.0,
+        "formal_input_use": {"score": T_EVIDENCE_WEIGHTS["formal_input_use"] if input_read else None,
+                             "max": T_EVIDENCE_WEIGHTS["formal_input_use"],
                              "evidence": ["input/read activity"] if input_read else [],
                              "status": "observed" if input_read else "unknown"},
-        "data_integrity": {"score": None, "max": 20.0,
+        "data_integrity": {"score": None, "max": T_EVIDENCE_WEIGHTS["data_integrity"],
                            "evidence": [], "status": "unknown"},
-        "contract_adherence": {"score": None, "max": 15.0, "evidence": [], "status": "unknown"},
-        "real_execution": {"score": 20.0 if agent_steps else 0.0, "max": 20.0,
+        "contract_adherence": {"score": None, "max": T_EVIDENCE_WEIGHTS["contract_adherence"], "evidence": [], "status": "unknown"},
+        "real_execution": {"score": T_EVIDENCE_WEIGHTS["real_execution"] if agent_steps else 0.0,
+                            "max": T_EVIDENCE_WEIGHTS["real_execution"],
                             "evidence": [f"{len(agent_steps)} agent steps", f"{len(calls)} tool calls"] if agent_steps else [],
                             "status": "observed"},
-        "validation_and_recovery": {"score": 15.0 if validation else None, "max": 15.0,
+        "validation_and_recovery": {"score": T_EVIDENCE_WEIGHTS["validation_and_recovery"] if validation else None,
+                                    "max": T_EVIDENCE_WEIGHTS["validation_and_recovery"],
                                     "evidence": (["validation activity"] if validation else []) + (["recovery"] if later_progress else []),
                                     "status": "observed" if validation else "unknown"},
-        "claim_support": {"score": 10.0 if output_claim and (validation or outcome) else None, "max": 10.0,
+        "claim_support": {"score": T_EVIDENCE_WEIGHTS["claim_support"] if output_claim and (validation or outcome) else None,
+                          "max": T_EVIDENCE_WEIGHTS["claim_support"],
                           "evidence": (["completion/output claim"] if output_claim else []),
                           "status": "observed" if output_claim and (validation or outcome) else "unknown"},
     }
+    for name, maximum in T_PROCESS_WEIGHTS.items():
+        dimensions[name] = {"score": None, "max": maximum, "evidence": [], "status": "unknown"}
     observed = [x for x in dimensions.values() if x["status"] == "observed" and x["score"] is not None]
     observed_score = sum(x["score"] for x in observed)
     observed_max = sum(x["max"] for x in observed)

@@ -8,6 +8,11 @@ benchmark stores before changing the pipeline. The previous
 optional F1--F8/ENV semantic review. Its semantic labels remain diagnostic;
 they are not silently converted into a universal score.
 
+The fixed v1 contract is documented in `docs/rubric-tqd-v1.md`: Q has six
+task-quality dimensions, D has five objective-difficulty dimensions, and T
+has a 60-point execution-evidence layer plus a 40-point evidence-bound
+semantic-process layer. `ENV` remains a separate environment status.
+
 The pipeline now records three separate namespaces:
 
 * Q0/task quality: the existing six Stage2 construction dimensions;
