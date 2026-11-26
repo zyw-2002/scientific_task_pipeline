@@ -8,6 +8,8 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -18,8 +20,38 @@ from pipeline.orchestration.trajectory_quality import T_PROCESS_WEIGHTS, _bound_
 ROOT = Path(__file__).resolve().parents[3]
 
 
+def evidence_spans(trajectory: dict) -> dict:
+    """Offer exact pointers so reviewers need not retype long escaped logs."""
+    def strings(value):
+        if isinstance(value, str): yield value
+        elif isinstance(value, Mapping):
+            for item in value.values(): yield from strings(item)
+        elif isinstance(value, list):
+            for item in value: yield from strings(item)
+    spans = {}
+    for step in trajectory.get('steps', []):
+        if not isinstance(step, Mapping) or step.get('step_id') is None: continue
+        texts = [s for s in strings(step) if len(s.strip()) >= 10][:8]
+        for index, text in enumerate(texts):
+            for offset in sorted({0, max(0, len(text)//2-80), max(0, len(text)-160)}):
+                quote = text[offset:offset+160]
+                if len(quote.strip()) < 10: continue
+                identifier = f"s{step['step_id']}-{index}-{offset}"
+                spans[identifier] = {'step_id': step['step_id'], 'quote': quote}
+        if len(spans) >= 8000: break
+    return spans
+
+
 def checked_review(raw: Mapping, trajectory: Path) -> dict:
     if not isinstance(raw, Mapping): raise ValueError('judge output must be an object')
+    raw = json.loads(json.dumps(raw))
+    spans = evidence_spans(json.loads(trajectory.read_bytes()))
+    criteria = raw.get('criteria', {})
+    for row in criteria.values() if isinstance(criteria, Mapping) else []:
+        if not isinstance(row, Mapping) or not isinstance(row.get('evidence'), list): continue
+        row['evidence'] = [dict(spans[ref['span_id']], span_id=ref['span_id'])
+                           if isinstance(ref, Mapping) and ref.get('span_id') in spans else ref
+                           for ref in row['evidence']]
     review = {'trajectory_sha256': hashlib.sha256(trajectory.read_bytes()).hexdigest(),
               'criteria': raw.get('criteria', {})}
     accepted = _bound_semantic_scores(review, trajectory)
@@ -62,7 +94,7 @@ def score_process(*, task_spec: dict, trajectory: Path, env_file: Path,
     if not documents: raise ValueError('process review requires actual public task documents')
     payload_view = {'task': {'task_id': task_spec['task_id'], 'documents': documents,
         'task_text': '\n\n'.join(doc['text'] for doc in documents)},
-        'trajectory': {'steps': evidence['steps']}}
+        'trajectory': {'steps': evidence['steps']}, 'evidence_spans': evidence_spans(evidence)}
     content = json.dumps(payload_view, ensure_ascii=False)
     if len(content.encode()) > 8_000_000:
         raise ValueError('trajectory review exceeds input limit; no silent truncation')
@@ -76,7 +108,7 @@ def score_process(*, task_spec: dict, trajectory: Path, env_file: Path,
     model = env.get('MODEL_NAME') or env.get('OPENAI_MODEL')
     key = env.get('API_KEY') or env.get('OPENAI_API_KEY') or env.get('OPENROUTER_API_KEY')
     if not model or not key: raise ValueError('configure the final judge model and API credential')
-    prompt = (ROOT/'prompts/evaluation/trajectory_process.md').read_text()
+    prompt = (ROOT/'prompts/evaluation/trajectory_process_spans.md').read_text()
     body = {'model': model, 'temperature': 0, 'response_format': {'type': 'json_object'},
         'max_tokens': 6000, 'messages': [{'role':'system','content':prompt}, {'role':'user','content':content}]}
     request = urllib.request.Request(endpoint, data=json.dumps(body).encode(),
@@ -87,7 +119,18 @@ def score_process(*, task_spec: dict, trajectory: Path, env_file: Path,
         'model':model, 'trajectory_sha256':hashlib.sha256(trajectory.read_bytes()).hexdigest(),
         'public_view_sha256':hashlib.sha256(content.encode()).hexdigest(),
         'prompt_sha256':hashlib.sha256(prompt.encode()).hexdigest()},indent=2)+'\n')
-    with opener.open(request, timeout=600) as response: data = response.read()
+    transport = []
+    for attempt in range(3):
+        try:
+            with opener.open(request, timeout=600) as response: data = response.read()
+            break
+        except urllib.error.HTTPError as exc:
+            transport.append({'attempt': attempt+1, 'http_status': exc.code})
+            (output/'transport-events.json').write_text(json.dumps(transport,indent=2)+'\n')
+            if exc.code != 429 or attempt == 2: raise
+            try: retry_after = float(exc.headers.get('Retry-After', '0'))
+            except (ValueError, TypeError): retry_after = 0
+            time.sleep(min(60, max(20*(2**attempt), retry_after)))
     (output/'api-response.json').write_bytes(data)
     envelope = json.loads(data); message = envelope['choices'][0]['message']
     if message.get('tool_calls') or message.get('function_call'): raise ValueError('judge returned forbidden tool calls')

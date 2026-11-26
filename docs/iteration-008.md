@@ -40,3 +40,13 @@ and exact per-step quotes before points contribute. Requests/responses and
 prompt/input identities are archived outside tracked source. A real final
 process review of the corrected NatureBench sample has been started; malformed
 or unbound evidence remains unknown. All 41 tests pass.
+
+The first real NatureBench T-P requests exposed two scoring-interface issues:
+HTTP 429 responses during concurrent runs, and model quotations that normalized
+whitespace rather than matching the raw trajectory. Such responses yielded
+unknown points, never unverified scores. The client now provides exact
+trajectory-span IDs, resolves them to original bytes locally and still checks
+the original step/hash binding. It also makes at most three rate-limit
+attempts with bounded backoff and transport audit records. This changes the
+citation interface only, not criterion values or weights. The existing quote
+interface remains available to frozen clients. All 42 tests pass.

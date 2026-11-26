@@ -2,11 +2,25 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
-from pipeline.orchestration.semantic_scoring import checked_review
+from pipeline.orchestration.semantic_scoring import checked_review, evidence_spans
 from pipeline.orchestration.trajectory_quality import T_PROCESS_WEIGHTS
 
 
 class SemanticScoringTests(unittest.TestCase):
+    def test_span_pointers_resolve_to_exact_original_text(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path=Path(tmp)/'trajectory.json'
+            trajectory={'steps':[{'step_id':7,'message':'Checked the actual samples.\nPreserved the original units.'}]}
+            path.write_text(json.dumps(trajectory))
+            spans=evidence_spans(trajectory); identifier=next(iter(spans))
+            review={'criteria':{'observation_evidence':{'score':4,'reason':'Inspected the actual inputs',
+                'evidence':[{'span_id':identifier}]}}}
+            result=checked_review(review,path)
+            self.assertEqual(result['criteria']['observation_evidence']['score'],4)
+            self.assertEqual(result['criteria']['observation_evidence']['evidence'][0]['quote'],spans[identifier]['quote'])
+            review['criteria']['observation_evidence']['evidence']=[{'span_id':'invented'}]
+            self.assertIsNone(checked_review(review,path)['criteria']['observation_evidence']['score'])
+
     def test_only_exact_step_quotes_contribute_to_process_points(self):
         with tempfile.TemporaryDirectory() as tmp:
             p=Path(tmp)/'trajectory.json'
