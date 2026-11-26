@@ -18,7 +18,7 @@ REQUIRED_INSTRUCTION_HEADINGS = (
 )
 
 _SOLVER_LEAKAGE_RULES = (
-    (re.compile(r'(?i)\bdoi\s*:\s*10\.\d{4,9}/[^\s<>"`]+|https?://(?:dx\.)?doi\.org/10\.\d{4,9}/[^\s<>"`]+'), 'DOI or DOI URL'),
+    (re.compile(r'(?i)\b10\.\d{4,9}/[^\s<>"`]+'), 'DOI or DOI URL'),
     (re.compile(r'(?i)\b(?:PRJ|ERP|DRP|SRP|ERR|SRR|DRR|ERS|SAMN|SAMEA|GSE|GSM)\d{4,12}\b'), 'source accession'),
     (re.compile(r'(?i)(?:https?://)?(?:www\.)?github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+(?:/[^\s<>"`]*)?'), 'GitHub repository or URL'),
     (re.compile(r'(?i)\b(?:github|commit|revision|提交)\b[^\n]{0,80}\b[0-9a-f]{7,40}\b'), 'source-code commit or revision'),

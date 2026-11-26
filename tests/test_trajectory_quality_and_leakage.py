@@ -101,6 +101,11 @@ class TrajectoryQualityTests(unittest.TestCase):
 
 
 class SolverLeakageTests(unittest.TestCase):
+    def test_bare_and_json_encoded_doi_are_source_locators(self):
+        from pipeline.stage2_construction.validation.instruction import solver_visible_leakage_errors
+        for text in ('10.12345/source.paper', '{"doi": "10.12345/source.paper"}'):
+            self.assertTrue(solver_visible_leakage_errors(text))
+
     def test_public_source_locators_and_success_claims_are_rejected(self):
         from pipeline.stage2_construction.validation.instruction import solver_visible_leakage_errors
         text = ('DOI: 10.1038/example.1234; ENA PRJEB19305 and ERR1816980; '

@@ -22,7 +22,7 @@ REQUIRED_INSTRUCTION_HEADINGS = (
 # task must describe the method and the data contract without handing the
 # Solver a copy/paste route to the source paper or repository.
 _LEAKAGE_RULES = (
-    (re.compile(r'(?i)\bdoi\s*:\s*10\.\d{4,9}/[^\s<>"`]+|https?://(?:dx\.)?doi\.org/10\.\d{4,9}/[^\s<>"`]+'),
+    (re.compile(r'(?i)\b10\.\d{4,9}/[^\s<>"`]+'),
      'public content exposes a DOI or DOI URL'),
     (re.compile(r'(?i)\b(?:PRJ|ERP|DRP|SRP|ERR|SRR|DRR|ERS|SAMN|SAMEA|GSE|GSM)\d{4,12}\b'),
      'public content exposes a source accession'),

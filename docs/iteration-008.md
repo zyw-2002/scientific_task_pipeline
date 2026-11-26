@@ -50,3 +50,8 @@ the original step/hash binding. It also makes at most three rate-limit
 attempts with bounded backoff and transport audit records. This changes the
 citation interface only, not criterion values or weights. The existing quote
 interface remains available to frozen clients. All 42 tests pass.
+
+Public-source leakage checks now also recognize bare DOI strings and DOI
+values inside JSON manifests, not just labeled `DOI:` prose or doi.org links.
+Both the runtime compatibility module and public validator share that rule;
+authored source evidence stays private. All 43 tests pass.
