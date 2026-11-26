@@ -24,6 +24,11 @@ def build_parser() -> argparse.ArgumentParser:
     iteration.add_argument('--seed', type=int, required=True)
     iteration.add_argument('--count', type=int, default=10)
     iteration.add_argument('--allow-pool-size', action='store_true')
+    score=sub.add_parser('score', help='summarize one rubric namespace from JSONL/JSON results')
+    score.add_argument('--results', type=Path, required=True)
+    score.add_argument('--output', type=Path, required=True)
+    score.add_argument('--target', type=float, default=90.0)
+    score.add_argument('--score-kind', choices=('scientific', 'task_quality', 'trajectory'), default='scientific')
     return parser
 
 
@@ -50,6 +55,16 @@ def main(argv=None) -> int:
         print(json.dumps({'status':'written','selection':str(selection_path),'preflight':str(preflight_path),
                           'selected_task_ids':selection['selected_task_ids'],'preflight_counts':preflight['preflight']},
                          ensure_ascii=False, indent=2))
+        return 0
+    if args.stage == 'score':
+        from pipeline.orchestration.iteration import _read_rows, score_summary
+        output = args.output.resolve()
+        output.parent.mkdir(parents=True, exist_ok=True)
+        summary = score_summary(_read_rows(args.results.resolve()), target=args.target,
+                                score_kind=args.score_kind)
+        output.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+        print(json.dumps({'status': 'written', 'output': str(output), 'score_kind': args.score_kind,
+                          'mean': summary['mean_score_scoreable'], 'passed': summary['passed']}, ensure_ascii=False))
         return 0
     if args.stage == 'stage1':
         from pipeline.stage1_sources.runner import run_step

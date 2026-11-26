@@ -12,6 +12,18 @@ Construct one executable scientific task from the supplied paper and source bund
 
 ## Hard execution rules
 
+## Solver-visible source protection
+
+Public instruction, README, data description, manifests, and helper scripts
+must contain only the objective, schema, constraints, method requirements,
+outputs, and evaluation contract. Never expose paper authors/title/journal/year,
+DOI or article URLs, dataset accessions or run IDs, GitHub URLs or commit
+hashes, private source-bundle paths, reference bytes, hidden labels, or claims
+about the original paper's successful result. Keep source locators and result
+claims in authoring/review evidence. Runtime preparation may provide an
+authorized method and independent validation, but not a copyable source
+address or original answer.
+
 ## Q0 task-quality gate
 
 Before accepting the draft, make these six quality dimensions explicit in the

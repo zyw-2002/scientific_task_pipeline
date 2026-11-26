@@ -10,6 +10,14 @@ Review the package in `paths.output_dir` independently of the Stage 01 worker. R
 
 ## Mandatory gates
 
+Scan all Solver-visible Markdown/JSON/YAML/TOML files for source-locator and
+answer leakage. Reject DOI/article URLs, recognizable paper citations,
+PRJ/ERR/SRR/GEO accessions, GitHub URLs or commit hashes, private paths, and
+original success claims such as “fully recovered”. Preserve such evidence only
+in the private review report; public preparation instructions must use an
+authorized, independently validated procedure without revealing the source
+address or reference answer.
+
 The review must explicitly assess the six Q0 task-quality dimensions:
 objective/constraints, scope/workload, solvability information, evaluability,
 source-backed relevance, and reproducibility/fairness/leakage. Cite current

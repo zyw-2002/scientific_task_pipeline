@@ -202,15 +202,21 @@ def score_summary(rows: Iterable[Mapping[str, Any]], *, target: float = 90.0,
     selected explicitly so a high task-quality score cannot masquerade as a
     scientific run score.
     """
-    if score_kind not in {"scientific", "task_quality"}:
-        raise ValueError("score_kind must be scientific or task_quality")
+    if score_kind not in {"scientific", "task_quality", "trajectory"}:
+        raise ValueError("score_kind must be scientific, task_quality, or trajectory")
     records = []
     for row in rows:
+        observed_score = None
+        coverage = None
         if score_kind == "scientific":
             score = row.get("scientific_score")
-        else:
+        elif score_kind == "task_quality":
             score = row.get("q0", row.get("quality_score"))
+        else:
+            score = row.get("trajectory_score", row.get("t0"))
         if isinstance(score, Mapping):
+            observed_score = score.get("observed_score")
+            coverage = score.get("coverage")
             score = score.get("total", score.get("score", score.get("value")))
         try:
             score = float(score) if score is not None else None
@@ -223,9 +229,13 @@ def score_summary(rows: Iterable[Mapping[str, Any]], *, target: float = 90.0,
         scoreable = score is not None and valid is not False and status not in {"blocked", "data_unavailable", "partial"}
         records.append({"task_id": row.get("task_id") or row.get("sample_id"), "score": score,
                         "score_kind": score_kind,
+                        "observed_score": observed_score if score_kind == "trajectory" else None,
+                        "coverage": coverage if score_kind == "trajectory" else None,
                         "scoreable": scoreable, "status": status or None,
                         "failure_reason": row.get("failure_reason") or row.get("readiness_reason")})
     scored = [r["score"] for r in records if r["scoreable"]]
+    observed = [r["observed_score"] for r in records
+                if score_kind == "trajectory" and isinstance(r.get("observed_score"), (int, float))]
     total = len(records)
     return {
         "schema_version": "pipeline-iteration-score-summary-v1",
@@ -236,6 +246,11 @@ def score_summary(rows: Iterable[Mapping[str, Any]], *, target: float = 90.0,
         "tasks_blocked_or_unscored": total - len(scored),
         "coverage": len(scored) / total if total else 0.0,
         "mean_score_scoreable": sum(scored) / len(scored) if scored else None,
+        "mean_observed_score": sum(observed) / len(observed) if observed else None,
+        "mean_trajectory_coverage": (sum(r["coverage"] for r in records
+                                          if isinstance(r.get("coverage"), (int, float))) /
+                                     sum(1 for r in records if isinstance(r.get("coverage"), (int, float))))
+                                    if any(isinstance(r.get("coverage"), (int, float)) for r in records) else None,
         "passed": len(scored) == total and bool(scored) and sum(scored) / len(scored) >= target,
         "records": records,
     }

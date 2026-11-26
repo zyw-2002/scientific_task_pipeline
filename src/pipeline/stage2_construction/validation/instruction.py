@@ -17,6 +17,30 @@ REQUIRED_INSTRUCTION_HEADINGS = (
     'Output', 'Constraints', 'Environment', 'Evaluation', 'Edge Cases', 'Time Budget',
 )
 
+_SOLVER_LEAKAGE_RULES = (
+    (re.compile(r'(?i)\bdoi\s*:\s*10\.\d{4,9}/[^\s<>"`]+|https?://(?:dx\.)?doi\.org/10\.\d{4,9}/[^\s<>"`]+'), 'DOI or DOI URL'),
+    (re.compile(r'(?i)\b(?:PRJ|ERP|DRP|SRP|ERR|SRR|DRR|ERS|SAMN|SAMEA|GSE|GSM)\d{4,12}\b'), 'source accession'),
+    (re.compile(r'(?i)(?:https?://)?(?:www\.)?github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+(?:/[^\s<>"`]*)?'), 'GitHub repository or URL'),
+    (re.compile(r'(?i)\b(?:github|commit|revision|提交)\b[^\n]{0,80}\b[0-9a-f]{7,40}\b'), 'source-code commit or revision'),
+    (re.compile(r'(?i)(?:/task/input/source_bundle|/task/evaluation|/u01/[\w./+&-]+|(?:^|[\s`])files/[\w./+&-]+)'), 'authoring or private filesystem path'),
+    (re.compile(r'(?i)(?:论文报告|研究人员(?:使用|发现|成功)|完整恢复|成功恢复|reported that|researchers? (?:used|successfully)|fully recovered|successfully recovered)'), 'source-paper result claim'),
+    (re.compile(r'(?i)\b(?:Science|Nature|Cell|PNAS|Bioinformatics|Nucleic Acids Research)\b[^\n]{0,120}\b(?:19|20)\d{2}\b'), 'recognizable paper citation'),
+)
+
+
+def solver_visible_leakage_errors(markdown: str, *, relative_path: str = '') -> list[str]:
+    """Reject source locators and original result claims in Solver-visible text."""
+    if not isinstance(markdown, str):
+        return ['public content is not text']
+    errors = []
+    for pattern, label in _SOLVER_LEAKAGE_RULES:
+        match = pattern.search(markdown)
+        if match:
+            where = f' in {relative_path}' if relative_path else ''
+            sample = re.sub(r'\s+', ' ', match.group(0)).strip()[:100]
+            errors.append(f'public content exposes {label}{where}: {sample}')
+    return errors
+
 
 def public_identity_errors(markdown: str, config: dict[str, Any]) -> list[str]:
     errors = []
@@ -345,4 +369,5 @@ def validate_instruction(markdown: str, config: dict[str, Any], protocol: dict |
                                      flags=re.I if key == 'reward_direction' else 0) for text in accepted):
                     errors.append(f'instruction Evaluation must state {key}: {value}')
     errors.extend(public_identity_errors(markdown, config))
+    errors.extend(solver_visible_leakage_errors(markdown))
     return errors

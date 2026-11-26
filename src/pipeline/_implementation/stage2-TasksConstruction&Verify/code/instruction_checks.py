@@ -17,6 +17,47 @@ REQUIRED_INSTRUCTION_HEADINGS = (
     'Output', 'Constraints', 'Environment', 'Evaluation', 'Edge Cases', 'Time Budget',
 )
 
+# These are intentionally conservative checks over Solver-visible prose and
+# manifests.  Authoring evidence may contain the original locator; the public
+# task must describe the method and the data contract without handing the
+# Solver a copy/paste route to the source paper or repository.
+_LEAKAGE_RULES = (
+    (re.compile(r'(?i)\bdoi\s*:\s*10\.\d{4,9}/[^\s<>"`]+|https?://(?:dx\.)?doi\.org/10\.\d{4,9}/[^\s<>"`]+'),
+     'public content exposes a DOI or DOI URL'),
+    (re.compile(r'(?i)\b(?:PRJ|ERP|DRP|SRP|ERR|SRR|DRR|ERS|SAMN|SAMEA|GSE|GSM)\d{4,12}\b'),
+     'public content exposes a source accession'),
+    (re.compile(r'(?i)(?:https?://)?(?:www\.)?github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+(?:/[^\s<>"`]*)?'),
+     'public content exposes a GitHub repository or URL'),
+    (re.compile(r'(?i)\b(?:github|commit|revision|提交)\b[^\n]{0,80}\b[0-9a-f]{7,40}\b'),
+     'public content exposes a source-code commit or revision'),
+    (re.compile(r'(?i)(?:/task/input/source_bundle|/task/evaluation|/u01/[\w./+&-]+|(?:^|[\s`])files/[\w./+&-]+)'),
+     'public content exposes an authoring or private filesystem path'),
+    (re.compile(r'(?i)(?:论文报告|研究人员(?:使用|发现|成功)|完整恢复|成功恢复|reported that|researchers? (?:used|successfully)|fully recovered|successfully recovered)'),
+     'public content exposes a source-paper result claim'),
+    (re.compile(r'(?i)\b(?:Science|Nature|Cell|PNAS|Bioinformatics|Nucleic Acids Research)\b[^\n]{0,120}\b(?:19|20)\d{2}\b'),
+     'public content exposes a recognizable paper citation'),
+)
+
+
+def solver_visible_leakage_errors(text: str, *, relative_path: str = '') -> list[str]:
+    """Return source-locator/result leaks in content mounted for the Solver.
+
+    This is a gate, rather than a claim that arbitrary scientific prose is
+    private.  It catches stable identifiers and direct result statements that
+    make the original paper or implementation searchable.  Review evidence is
+    never passed to this function.
+    """
+    if not isinstance(text, str):
+        return ['public content is not text']
+    errors = []
+    for pattern, message in _LEAKAGE_RULES:
+        match = pattern.search(text)
+        if match:
+            sample = re.sub(r'\s+', ' ', match.group(0)).strip()[:100]
+            location = f' in {relative_path}' if relative_path else ''
+            errors.append(f'{message}{location}: {sample}')
+    return errors
+
 
 def public_identity_errors(markdown: str, config: dict[str, Any]) -> list[str]:
     errors = []

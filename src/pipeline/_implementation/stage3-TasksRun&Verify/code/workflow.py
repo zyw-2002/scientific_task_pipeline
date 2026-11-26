@@ -142,6 +142,17 @@ def run_workflow(*, output: Path, package: Path | None = None, pair: Path | None
     def finish(status: str) -> dict:
         result['failure_attribution'] = result['judge'].get('failure_attribution')
         result.update(status=status, finished_at=now(), wall_time_sec=time.monotonic() - started)
+        # T0 is a separate, evidence-based trajectory score.  It never
+        # replaces the scientific metric or the Q0 construction score.
+        try:
+            from pipeline.orchestration.trajectory_quality import score_trajectory
+            result['trajectory_score'] = score_trajectory(result)
+        except (ImportError, OSError, TypeError, ValueError) as exc:
+            result['trajectory_score'] = {
+                'schema_version': 'pipeline-trajectory-quality-v1',
+                'score_kind': 'trajectory', 'score': None, 'assessed': False,
+                'findings': [f'T0 scoring unavailable: {exc}'],
+            }
         from pipeline.stage3_execution.evidence.result_accounting import classify, summarize
         result['result_accounting'] = classify(result)
         result['paper_comparison']['eligible_for_paper_comparison'] = result['result_accounting']['eligible_for_paper_comparison']

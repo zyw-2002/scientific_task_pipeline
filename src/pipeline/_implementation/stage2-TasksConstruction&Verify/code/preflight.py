@@ -23,7 +23,8 @@ from typing import Any, Sequence
 from contract import (atomic_write_json, package_fingerprint, package_layout,
                       package_manifest, package_path, sha256_file,
                       execution_fingerprint, validate_execution)
-from instruction_checks import validate_instruction, public_identity_errors, REQUIRED_INSTRUCTION_HEADINGS
+from instruction_checks import (validate_instruction, public_identity_errors,
+                                solver_visible_leakage_errors, REQUIRED_INSTRUCTION_HEADINGS)
 
 REPORT_SCHEMA_VERSION = "pipline-preflight-report-v2"
 DEFAULT_AUTHORING_PATHS = Path('/task/input/paths.json')
@@ -543,7 +544,10 @@ def check_static(root: Path, spec: dict[str, Any], *, deferred_resources=None, c
     formal_paths = {package_path(root, s['package_path']) for s in spec.get('data', {}).get('sources', [])
                     if construction_only and spec.get('scope_contract_version') == 3
                     and s.get('role') in {'input', 'reference'} and s.get('package_path')}
-    identity_paths = [package_path(root, layout["method_path"])]
+    # instruction.md is mounted/read by the Solver even though it lives beside
+    # the public input directory; include it in the same leakage boundary.
+    identity_paths = [package_path(root, layout["method_path"]),
+                      package_path(root, layout["instruction_path"])]
     identity_paths.extend(item for item in public.rglob("*") if item.is_file() and
                           item.suffix.lower() in {".md", ".json", ".yaml", ".yml", ".toml", ".py", ".sh"}
                           and not (item.is_relative_to(package_path(root, layout['data_path']))
@@ -551,6 +555,15 @@ def check_static(root: Path, spec: dict[str, Any], *, deferred_resources=None, c
     for item in identity_paths:
         for error in public_identity_errors(_read(item), spec):
             errors.append(f"{item.relative_to(root)}: {error}")
+    # Public documentation and manifests are Solver inputs.  Keep source
+    # locators/result claims in private authoring evidence only; otherwise the
+    # task can be solved by searching the cited paper or repository.
+    public_paths = [item for item in identity_paths if item.is_relative_to(public)]
+    solver_visible_paths = public_paths + [package_path(root, layout["instruction_path"])]
+    for item in solver_visible_paths:
+        relative = item.relative_to(root).as_posix()
+        for error in solver_visible_leakage_errors(_read(item), relative_path=relative):
+            errors.append(error)
     checks.append(_check("PUBLIC-PRIVATE-BOUNDARY", errors))
     if spec.get('framework_generation_version') == 1:
         from evaluation_protocol import declaration_errors
