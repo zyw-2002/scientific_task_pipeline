@@ -1,15 +1,55 @@
 import json
+import copy
+import hashlib
 from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
 from pipeline.orchestration.semantic_scoring import (
     checked_review, evidence_spans, behavior_view, segment_views, checked_segment_facts, score_process,
+    _segment_observations, _call_judge,
 )
 from pipeline.orchestration.trajectory_quality import T_PROCESS_WEIGHTS
 
 
 class SemanticScoringTests(unittest.TestCase):
+    def test_citation_repair_is_bounded_and_cannot_rewrite_observations(self):
+        raw = {'criteria': {name: {'observations': [{'reason': 'Observed substantive behavior',
+            'evidence': ['valid']}]} for name in T_PROCESS_WEIGHTS}}
+        raw['criteria']['strategy_choice']['observations'][0]['evidence'] = ['invented']
+        fixed = copy.deepcopy(raw)
+        fixed['criteria']['strategy_choice']['observations'][0]['evidence'] = ['valid']
+        view = {'evidence_spans': {'valid': {'step_id': 1, 'quote': 'The actual computation was observed'}}}
+        args = dict(content=view, prompt='Extract observations', env={}, output=Path('/unused'), proxy_url=None)
+        with patch('pipeline.orchestration.semantic_scoring._call_judge', side_effect=[(raw, None), (fixed, None)]) as request:
+            facts, usage = _segment_observations(**args)
+            self.assertEqual(request.call_count, 2)
+            self.assertEqual(len(usage), 2)
+            self.assertEqual(facts['criteria']['strategy_choice']['observations'][0]['evidence'], [{'span_id': 'valid'}])
+        fixed['criteria']['strategy_choice']['observations'][0]['reason'] = 'A softened replacement claim'
+        with patch('pipeline.orchestration.semantic_scoring._call_judge', side_effect=[(raw, None), (fixed, None)]):
+            with self.assertRaisesRegex(ValueError, 'changed the observation statements'):
+                _segment_observations(**args)
+
+    def test_saved_responses_are_reused_only_for_identical_model_prompt_and_input(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp); content = {'public': 'Actual behavior evidence'}; prompt = 'Fixed rubric'
+            text = json.dumps(content, ensure_ascii=False)
+            identity = {'model': 'test', 'public_view_sha256': hashlib.sha256(text.encode()).hexdigest(),
+                        'prompt_sha256': hashlib.sha256(prompt.encode()).hexdigest()}
+            (root/'request-view.json').write_text(text+'\n')
+            (root/'request-identity.json').write_text(json.dumps(identity))
+            (root/'api-response.json').write_text(json.dumps({'choices': [{'message': {'content': '{"criteria":{}}'}}]}))
+            args = dict(content=content, prompt=prompt, env={'BASE_URL': 'https://judge.example/v1',
+                'MODEL_NAME': 'test', 'API_KEY': 'dummy'}, output=root, proxy_url=None, use_cache=True)
+            with patch('pipeline.orchestration.semantic_scoring.urllib.request.build_opener') as network:
+                self.assertEqual(_call_judge(**args)[0], {'criteria': {}})
+                network.assert_not_called()
+                with self.assertRaisesRegex(ValueError, 'different request identity'):
+                    _call_judge(**{**args, 'content': {'public': 'Changed evidence'}})
+                with self.assertRaisesRegex(ValueError, 'different request identity'):
+                    _call_judge(**{**args, 'prompt': 'Changed rubric'})
+
     def test_segments_cover_complete_steps_and_reject_oversized_steps(self):
         trace = {'steps': [{'step_id': index, 'message': '完整观察与计算结果' * 20} for index in range(7)]}
         parts = segment_views(trace, max_bytes=900)
@@ -26,6 +66,13 @@ class SemanticScoringTests(unittest.TestCase):
             for name in T_PROCESS_WEIGHTS}}
         result = checked_segment_facts(raw, spans)
         self.assertNotIn('score', json.dumps(result))
+        nested = copy.deepcopy(raw)
+        first = next(iter(T_PROCESS_WEIGHTS))
+        nested['criteria'] = {first: {**nested['criteria'].pop(first), **nested['criteria']}}
+        self.assertEqual(checked_segment_facts(nested, spans), result)
+        nested['criteria']['strategy_choice'] = raw['criteria']['strategy_choice']
+        with self.assertRaisesRegex(ValueError, 'ambiguous duplicate criterion'):
+            checked_segment_facts(nested, spans)
         raw['criteria']['strategy_choice']['observations'][0]['evidence'] = ['real']
         self.assertEqual(checked_segment_facts(raw, spans), result)
         raw['criteria']['strategy_choice']['observations'][0]['evidence'] = [{'span_id': 'invented'}]
