@@ -432,7 +432,7 @@ def check_evidence_errors(package, spec, report):
                 except (OSError, ValueError, KeyError, TypeError, SyntaxError) as exc:
                     errors.append(check['name'] + ': cannot validate calibration evidence: ' + str(exc))
         if check.get('name') == smoke_check:
-            from scoring_smoke import implementation_hashes, outcome_errors, resource_evidence_errors, inspect_config, equivalence_errors
+            from scoring_smoke import implementation_hashes, outcome_errors, resource_evidence_errors, inspect_config, equivalence_errors, _file
             evaluation = Path(package) / 'common_task/evaluation'
             if len(smoke_proofs) != 1:
                 errors.append('passed scoring smoke needs exactly one preserved structured report')
@@ -455,7 +455,7 @@ def check_evidence_errors(package, spec, report):
                     errors.append('scoring smoke evidence does not cover all passing cases')
                 for case in config['cases']:
                     row = next((r for r in tested if r.get('id') == case['id']), {})
-                    if row.get('submission_sha256') != sha256_file(evaluation / case['submission']):
+                    if row.get('submission_sha256') != sha256_file(_file(evaluation, case['submission'])):
                         errors.append('scoring smoke submission changed after test: ' + case['id'])
                     event = row.get('event')
                     errors.extend(case['id'] + ': ' + message for message in

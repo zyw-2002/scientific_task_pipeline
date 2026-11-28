@@ -5,7 +5,7 @@ Construct one executable scientific task from the supplied paper and source bund
 ## Required order
 
 1. Run `python /task/input/pipeline_tools/authoring_package.py` once, then run `python /task/input/pipeline_tools/authoring_package.py --source-index`. Read the generated `execution.json`, private `source_evidence_index.json`, and existing `common_task/evaluation/protocol.json`. Never copy the private index into Solver-visible files.
-2. Inspect the source index, source inventory, relevant paper methods/experiments, and resource availability statements before declaring the scientific task. Establish the objective, main experiment inventory, formal inputs, splits, metric definitions and allowed method freedom. For each source claim or main experiment, first choose a frozen primary source and exact section/caption anchor from the private index, then run `authoring_package.py --find-quote` and copy its returned object without editing. Do not write a scientific claim or experiment entry until its source evidence object is present. Keep unverified claims explicitly uncertain. Then write a coherent draft of `execution.json`, `instruction.md`, `method.md`, `environment_requirements.md`, `requirements.txt`, `README.md`, `data_description.md`, `data_sources.json`, `metric_adapter.py`, `protocol.json`, `calibration.json`, `scoring_smoke.json`, and fixtures. Preserve the initialized ABI/scaffold rather than replacing it with guessed field names. Do not invent science to complete the file list.
+2. Inspect the source index, source inventory, relevant paper methods/experiments, and resource availability statements before declaring the scientific task. Establish the objective, main experiment inventory, formal inputs, splits, metric definitions and allowed method freedom. For each claim grounded in the paper or author artifacts, first choose a frozen primary source and exact section/caption anchor from the private index, then run `authoring_package.py --find-quote` and copy its returned object without editing. Paper/author-artifact claims and experiments need their exact source evidence objects before drafting. If the source does not specify a scale, split or metric, use the supported task_policy/not_specified origin with a statement and rationale; do not invent a quote or block a legitimate documented adaptation. Keep unverified claims explicitly uncertain. Then write a coherent draft of `execution.json`, `instruction.md`, `method.md`, `environment_requirements.md`, `requirements.txt`, `README.md`, `data_description.md`, `data_sources.json`, `metric_adapter.py`, `protocol.json`, `calibration.json`, `scoring_smoke.json`, and fixtures. Preserve the initialized ABI/scaffold rather than replacing it with guessed field names. Do not invent science to complete the file list.
 3. Run `python /task/input/pipeline_tools/preflight.py --construction --generate-framework --paths /task/input/paths.json --package /workspace/build --report /workspace/construction_preflight.json`.
 4. Read only the failed check IDs and their first reason. Fix the files named by those reasons. Never print the full report, schema, source bundle, or generated files. Never rewrite a passing file. Run preflight after each coherent group of fixes.
 5. Run `python /task/input/pipeline_tools/scoring_smoke.py` and the requested calibration cases. Save the JSON output. Finish with one preflight and one smoke run. Use the configured runtime and attempt budgets; preserve the current draft and concise unresolved evidence when the budget ends. Group related contract repairs and recheck their dependencies instead of stopping at an arbitrary tool-turn count. If formal resources are absent, declare them with `availability=runtime_download`, identity, schema, preparation command, and `provided=false`. Do not fabricate bytes, labels, checkpoints, or placeholder data files. A deferred resource with an authorized source, runnable `prepare.command`, and independent `prepare.validate` is a construction PASS with `execution_ready=false` until Stage3 materializes it. Mark the task `BLOCKED` only when a required resource has no authorized source or runnable, verifiable preparation path. Stage3 refers to the execution package in this reorganized pipeline; do not use host source-tree paths in the task package. Keep construction task-general: do not hardcode a familiar dataset or package (for example BBBP) as a fallback for unrelated tasks; use each task's own public source and dependency instructions.
@@ -120,3 +120,26 @@ python /task/input/pipeline_tools/preflight.py
 ## Method requirements and actual execution evidence
 
 Determine from the source and scientific objective whether the task allows any compliant method or explicitly requires an algorithmic capability/process. State that distinction publicly in method-neutral terms when unrestricted. Do not require an existing package when the method can be implemented independently. When implementation, training, simulation or another scientific process is mandatory, bind that requirement to assessment and to code/trajectory/experiment-log evidence reviewed at Stage3. A final numeric output alone cannot demonstrate a required scientific process. Keep numerical accuracy and process compliance distinct; do not infer the method from a submitted method-name string or a package import. Do not turn optional paper techniques into mandatory restrictions.
+
+## Concrete scientific-control ABI
+
+`calibration.json` describes a real regression suite for the evaluator, not
+commands that perturb the Solver's output. Keep the initialized fields:
+`source_dir` is a relative directory; `command` is a nonempty argv array such
+as `["python", "{root}/checks/test_metric.py"]`; `mutations` contains `id`,
+`fault`, `target` (relative to source_dir), and `replacement` (relative to the
+calibration configuration). Write the actual suite and faulty adapter files.
+The guard runs the suite in disposable copies: the real implementation must
+pass, and each substituted implementation must cause an assertion/test
+failure. An import failure or syntax error is not a detected scientific fault.
+Never add per-mutation `argv` as a substitute for the top-level suite command.
+
+For malformed submissions, the task adapter should raise the provided
+`evaluation_protocol.InvalidSubmission` after checking the submission fields,
+IDs and values. Ordinary evaluator/dependency exceptions remain runtime_error;
+do not catch all exceptions and relabel them invalid_submission. Read required
+formal references from the bound context and keep their failures distinct.
+
+`scientific_handoff` defaults to the actual capture/evaluator/evidence smoke
+runner when omitted. Do not invent a CLI for `metric_adapter.measure()`;
+custom handoff commands must exercise the real scoring transport.

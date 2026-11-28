@@ -34,7 +34,7 @@ _LEAKAGE_RULES = (
      'public content exposes an authoring or private filesystem path'),
     (re.compile(r'(?i)(?:论文报告|研究人员(?:使用|发现|成功)|完整恢复|成功恢复|reported that|researchers? (?:used|successfully)|fully recovered|successfully recovered)'),
      'public content exposes a source-paper result claim'),
-    (re.compile(r'(?i)\b(?:Science|Nature|Cell|PNAS|Bioinformatics|Nucleic Acids Research)\b[^\n]{0,120}\b(?:19|20)\d{2}\b'),
+    (re.compile(r'(?i)\b(?:Science|Nature|Cell|PNAS|Bioinformatics|Nucleic Acids Research)\b\s*[,.;:]?\s*\(?(?:19|20)\d{2}\b'),
      'public content exposes a recognizable paper citation'),
 )
 

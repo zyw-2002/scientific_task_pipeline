@@ -24,7 +24,7 @@ _SOLVER_LEAKAGE_RULES = (
     (re.compile(r'(?i)\b(?:github|commit|revision|提交)\b[^\n]{0,80}\b[0-9a-f]{7,40}\b'), 'source-code commit or revision'),
     (re.compile(r'(?i)(?:/task/input/source_bundle|/task/evaluation|/u01/[\w./+&-]+|(?:^|[\s`])files/[\w./+&-]+)'), 'authoring or private filesystem path'),
     (re.compile(r'(?i)(?:论文报告|研究人员(?:使用|发现|成功)|完整恢复|成功恢复|reported that|researchers? (?:used|successfully)|fully recovered|successfully recovered)'), 'source-paper result claim'),
-    (re.compile(r'(?i)\b(?:Science|Nature|Cell|PNAS|Bioinformatics|Nucleic Acids Research)\b[^\n]{0,120}\b(?:19|20)\d{2}\b'), 'recognizable paper citation'),
+    (re.compile(r'(?i)\b(?:Science|Nature|Cell|PNAS|Bioinformatics|Nucleic Acids Research)\b\s*[,.;:]?\s*\(?(?:19|20)\d{2}\b'), 'recognizable paper citation'),
 )
 
 

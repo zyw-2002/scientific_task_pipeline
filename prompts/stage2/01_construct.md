@@ -4,8 +4,8 @@ Construct one executable scientific task from the supplied paper and source bund
 
 ## Required order
 
-1. Run `python /task/input/pipeline_tools/authoring_package.py` once. Read the generated `execution.json` and the existing `common_task/evaluation/protocol.json`.
-2. Inspect the source inventory, the relevant paper methods/experiments, and resource availability statements before declaring the scientific task. Establish the objective, main experiment inventory, formal inputs, splits, metric definitions and allowed method freedom. Locate exact evidence with `authoring_package.py --find-quote`; keep unverified claims explicitly uncertain. Then write a coherent draft of `execution.json`, `instruction.md`, `method.md`, `environment_requirements.md`, `requirements.txt`, `README.md`, `data_description.md`, `data_sources.json`, `metric_adapter.py`, `protocol.json`, `calibration.json`, `scoring_smoke.json`, and fixtures. Preserve the initialized ABI/scaffold rather than replacing it with guessed field names. Do not invent science to complete the file list.
+1. Run `python /task/input/pipeline_tools/authoring_package.py` once, then run `python /task/input/pipeline_tools/authoring_package.py --source-index`. Read the generated `execution.json`, private `source_evidence_index.json`, and existing `common_task/evaluation/protocol.json`. Never copy the private index into Solver-visible files.
+2. Inspect the source index, source inventory, relevant paper methods/experiments, and resource availability statements before declaring the scientific task. Establish the objective, main experiment inventory, formal inputs, splits, metric definitions and allowed method freedom. For each claim grounded in the paper or author artifacts, first choose a frozen primary source and exact section/caption anchor from the private index, then run `authoring_package.py --find-quote` and copy its returned object without editing. Paper/author-artifact claims and experiments need their exact source evidence objects before drafting. If the source does not specify a scale, split or metric, use the supported task_policy/not_specified origin with a statement and rationale; do not invent a quote or block a legitimate documented adaptation. Keep unverified claims explicitly uncertain. Then write a coherent draft of `execution.json`, `instruction.md`, `method.md`, `environment_requirements.md`, `requirements.txt`, `README.md`, `data_description.md`, `data_sources.json`, `metric_adapter.py`, `protocol.json`, `calibration.json`, `scoring_smoke.json`, and fixtures. Preserve the initialized ABI/scaffold rather than replacing it with guessed field names. Do not invent science to complete the file list.
 3. Run `python /task/input/pipeline_tools/preflight.py --construction --generate-framework --paths /task/input/paths.json --package /workspace/build --report /workspace/construction_preflight.json`.
 4. Read only the failed check IDs and their first reason. Fix the files named by those reasons. Never print the full report, schema, source bundle, or generated files. Never rewrite a passing file. Run preflight after each coherent group of fixes.
 5. Run `python /task/input/pipeline_tools/scoring_smoke.py` and the requested calibration cases. Save the JSON output. Finish with one preflight and one smoke run. Use the configured runtime and attempt budgets; preserve the current draft and concise unresolved evidence when the budget ends. Group related contract repairs and recheck their dependencies instead of stopping at an arbitrary tool-turn count. If formal resources are absent, declare them with `availability=runtime_download`, identity, schema, preparation command, and `provided=false`. Do not fabricate bytes, labels, checkpoints, or placeholder data files. A deferred resource with an authorized source, runnable `prepare.command`, and independent `prepare.validate` is a construction PASS with `execution_ready=false` until Stage3 materializes it. Mark the task `BLOCKED` only when a required resource has no authorized source or runnable, verifiable preparation path. Stage3 refers to the execution package in this reorganized pipeline; do not use host source-tree paths in the task package. Keep construction task-general: do not hardcode a familiar dataset or package (for example BBBP) as a fallback for unrelated tasks; use each task's own public source and dependency instructions.
@@ -22,18 +22,15 @@ Construction order for reliable, general packages:
 
 ## Solver-visible source protection
 
-The public instruction, README, data description, public manifests, and
-public helper scripts must describe the scientific objective, input schema,
-method constraints, output schema, and evaluation contract without revealing a
-locator for the source material. Do not put paper authors/title/journal/year,
-DOI or article URL, dataset accession or run ID (for example PRJ/ERR/SRR/GEO
-identifiers), repository URL or commit hash, source-bundle/private paths, or a
-claim about the original paper's successful result in Solver-visible files.
-Keep those facts only in private authoring and review evidence. If runtime
-download is required, expose the authorized preparation procedure and
-independent validation rules, not the original paper's copyable address or
-answer. The method may be described abstractly enough to implement and test,
-but must not contain reference bytes, hidden labels, or a source locator.
+Public instruction, README, data description, manifests, and helper scripts
+must contain only the objective, schema, constraints, method requirements,
+outputs, and evaluation contract. Never expose paper authors/title/journal/year,
+DOI or article URLs, dataset accessions or run IDs, GitHub URLs or commit
+hashes, private source-bundle paths, reference bytes, hidden labels, or claims
+about the original paper's successful result. Keep source locators and result
+claims in authoring/review evidence. Runtime preparation may provide an
+authorized method and independent validation, but not a copyable source
+address or original answer.
 
 ## Q0 task-quality gate
 
@@ -82,7 +79,7 @@ independent metric or reward expectations for the actual protocol metric names.
 - Public formal resource paths are package-relative paths such as `common_task/environment/input/data/reference.h5ad` and `common_task/environment/input/data/query.h5ad`, which map to `/task/problem/data/...` for the Solver. A deferred recipe must read the complete Stage3 mount `/task/problem/data`, copy or validate into `{output}`, and record the real schema and split. Do not use `files/...` from the authoring source bundle as a Solver data path.
 - `protocol.json` must bind every main paper experiment to a quality requirement, formal resource IDs, metric unit, population, split, deliverable, aggregation, source evidence, and objective. Use one stable experiment ID per experiment. `scope.figure_table_decisions` covers every paper caption.
 - Use the evaluator ABI exactly. Each `units[]` item has `id`, `path` (use `{submission}` for a direct single-file submission), and the metric name. Each `aggregations[]` item has `output`, `operation` (`identity`, `mean`, `std`, `sum`, `min`, or `max`), `metric`, and `unit_ids`. `reward_metric` must equal an aggregation `output`, and `reward_direction` must be `higher_is_better` or `lower_is_better`. Do not substitute `unit_id`, `aggregation_id`, or `method` for these fields.
-- For every `main_experiments` entry, `resource_ids` must point to the formal dataset/checkpoint IDs used by that experiment, `requirement_ids` must point to existing requirements, and `unit_ids` must point to existing evaluator units. Do not use article or code IDs as experiment data. Cite exact paper paths and line/caption evidence for objective, scale, split, and metric. Set `assessment.scope.scope_policy=full` for a complete panel or `bounded` for a deliberate source-backed subset; bounded scope must document task_scope, difficulty_impact, adaptations, and source evidence.
+- For every `main_experiments` entry, `resource_ids` must point to the formal dataset/checkpoint IDs used by that experiment, `requirement_ids` must point to existing requirements, and `unit_ids` must point to existing evaluator units. Do not use article or code IDs as experiment data. Cite exact paper paths and line/caption evidence for objective, scale, split, and metric. Set `assessment.scope.scope_policy=full` when reproducing the complete paper panel. Set `scope_policy=bounded` for a deliberate source-backed subset, and document `task_scope`, `difficulty_impact`, `assessment.adaptations`, and source evidence; this choice is part of the generated package contract and never requires an interactive case decision.
 - Add `assessment.scope.difficulty_profile` with `version=1`, source evidence, six 1–5 level dimensions for both paper and task, `main_experiment_count`, positive weights, `overall_gap_limit <= 0.20`, and `split_drop_limit <= 1`. The paper side records independent-reference and model/checkpoint requirements. The task side records the corresponding evaluator-bound resources and method type. Preflight rejects an overall gap above 20%, a split drop above one level, an undocumented bounded scope, self-reported scoring in place of independent reference data, or a rule-only task where a model/checkpoint is required.
 - Set `difficulty_contract_version=1` in `execution.json`; without this marker the profile is not eligible for production handoff.
 - Implement real scientific scoring in `metric_adapter.py`. It must use independent references or stated analytical/objective rules and never read submitted self-reported scores. `scoring_smoke.json` must include one correct, one weak-valid, and one invalid submission with independently computed expected ranges. Missing units count in the declared denominator.
@@ -110,7 +107,7 @@ python /task/input/pipeline_tools/review_bindings.py --reviewed
 
 ## Source-binding checklist before handoff
 
-Copy the complete main-experiment inventory from `authoring_package.py` when `scope_policy=full`. For `scope_policy=bounded`, declare the selected source-backed experiments and record omitted experiments in task scope/adaptations with source evidence. Every declared entry must contain `statement`, `population`, `split`, `deliverable`, `metric_unit`, `aggregation`, `resource_ids`, `requirement_ids`, `unit_ids`, `origin`, and exact `source_evidence`. `resource_ids` must be formal dataset, query, label, split, or checkpoint IDs used by that experiment. `requirement_ids` and `unit_ids` must resolve to existing quality requirements and evaluator units.
+Copy the complete main-experiment inventory from `authoring_package.py` when `scope_policy=full`. For `scope_policy=bounded`, declare the selected source-backed experiments and record the omitted experiments in the task scope/adaptations with source evidence. Every declared entry must contain `statement`, `population`, `split`, `deliverable`, `metric_unit`, `aggregation`, `resource_ids`, `requirement_ids`, `unit_ids`, `origin`, and exact `source_evidence`. `resource_ids` must be formal dataset, query, label, split, or checkpoint IDs used by that experiment. `requirement_ids` and `unit_ids` must resolve to existing quality requirements and evaluator units.
 
 Fill the four `assessment.scope.source_claims` entries (`objective`, `scale`, `split`, `metric`) with exact quote, frozen source path, hash, and locator objects. Fill `scope.figure_table_decisions` for every caption returned by `authoring_package.py` with `covered`, `duplicate`, `schematic`, or `outside_scope`, a source-bound rationale, and the required experiment or boundary evidence. Never omit a caption. Use the exact objects returned by `authoring_package.py --find-quote`.
 
@@ -123,3 +120,26 @@ python /task/input/pipeline_tools/preflight.py
 ## Method requirements and actual execution evidence
 
 Determine from the source and scientific objective whether the task allows any compliant method or explicitly requires an algorithmic capability/process. State that distinction publicly in method-neutral terms when unrestricted. Do not require an existing package when the method can be implemented independently. When implementation, training, simulation or another scientific process is mandatory, bind that requirement to assessment and to code/trajectory/experiment-log evidence reviewed at Stage3. A final numeric output alone cannot demonstrate a required scientific process. Keep numerical accuracy and process compliance distinct; do not infer the method from a submitted method-name string or a package import. Do not turn optional paper techniques into mandatory restrictions.
+
+## Concrete scientific-control ABI
+
+`calibration.json` describes a real regression suite for the evaluator, not
+commands that perturb the Solver's output. Keep the initialized fields:
+`source_dir` is a relative directory; `command` is a nonempty argv array such
+as `["python", "{root}/checks/test_metric.py"]`; `mutations` contains `id`,
+`fault`, `target` (relative to source_dir), and `replacement` (relative to the
+calibration configuration). Write the actual suite and faulty adapter files.
+The guard runs the suite in disposable copies: the real implementation must
+pass, and each substituted implementation must cause an assertion/test
+failure. An import failure or syntax error is not a detected scientific fault.
+Never add per-mutation `argv` as a substitute for the top-level suite command.
+
+For malformed submissions, the task adapter should raise the provided
+`evaluation_protocol.InvalidSubmission` after checking the submission fields,
+IDs and values. Ordinary evaluator/dependency exceptions remain runtime_error;
+do not catch all exceptions and relabel them invalid_submission. Read required
+formal references from the bound context and keep their failures distinct.
+
+`scientific_handoff` defaults to the actual capture/evaluator/evidence smoke
+runner when omitted. Do not invent a CLI for `metric_adapter.measure()`;
+custom handoff commands must exercise the real scoring transport.

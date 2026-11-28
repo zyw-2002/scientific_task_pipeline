@@ -124,6 +124,14 @@ class TrajectoryQualityTests(unittest.TestCase):
 
 
 class SolverLeakageTests(unittest.TestCase):
+    def test_cell_schema_is_not_a_journal_citation_but_citation_still_fails(self):
+        from pipeline.stage2_construction.validation.instruction import solver_visible_leakage_errors
+        from pipeline._legacy_loader import STAGE2_ROOT, load_file
+        compat = load_file(STAGE2_ROOT/'code/instruction_checks.py', '_cell_citation_compat', stage=2)
+        for check in [solver_visible_leakage_errors, compat.solver_visible_leakage_errors]:
+            self.assertEqual(check('obs contains cell-type label and batch columns. Shape: 2017 cells.'), [])
+            self.assertTrue(check('Source: Science. 2017;355(6328):950-954.'))
+
     def test_bare_and_json_encoded_doi_are_source_locators(self):
         from pipeline.stage2_construction.validation.instruction import solver_visible_leakage_errors
         for text in ('10.12345/source.paper', '{"doi": "10.12345/source.paper"}'):

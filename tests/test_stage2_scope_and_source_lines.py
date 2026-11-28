@@ -1,14 +1,62 @@
 import hashlib
 import json
+import shutil
 from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
 
-from pipeline._legacy_loader import STAGE2_ROOT, implementation_paths, load_file
+from pipeline._legacy_loader import STAGE2_ROOT, STAGE3_ROOT, implementation_paths, load_file
 
 
 class Stage2ScopeAndSourceTests(unittest.TestCase):
+    def test_real_smoke_receipt_survives_package_relative_fixture_and_rejects_tampering(self):
+        with tempfile.TemporaryDirectory() as tmp, implementation_paths(stage=2):
+            load_file(STAGE3_ROOT/'code/score_attempt.py', 'score_attempt', stage=3)
+            import scoring_smoke, assessment_contract, framework_generator
+            package = Path(tmp)/'package'; evaluation = package/'common_task/evaluation'
+            fixtures = evaluation/'fixtures'; fixtures.mkdir(parents=True)
+            for name in ('evaluation_protocol.py', 'scoring_entry.py'):
+                shutil.copyfile(STAGE2_ROOT/'code'/name, evaluation/name)
+            (evaluation/'metric_adapter.py').write_text(
+                'from pathlib import Path\nfrom evaluation_protocol import InvalidSubmission\n'
+                'def measure(path, context):\n'
+                '    text = Path(path).read_text()\n'
+                '    if text == "bad": raise InvalidSubmission("invalid numeric control")\n'
+                '    return {"value": float(text)}\n')
+            protocol = {'adapter': 'metric_adapter.py', 'units': [{'id': 'one', 'path': '{submission}'}],
+                        'aggregations': [{'output': 'value', 'metric': 'value', 'operation': 'identity', 'unit_ids': ['one']}],
+                        'reward_metric': 'value', 'reward_direction': 'higher_is_better'}
+            (evaluation/'protocol.json').write_text(json.dumps(protocol))
+            cases = []
+            for name, kind, text in [('correct', 'correct', '1'), ('weak', 'weak_valid', '0.25'), ('invalid', 'invalid', 'bad')]:
+                (fixtures/(name+'.txt')).write_text(text)
+                case = {'id': name, 'kind': kind, 'description': 'Independent numeric control',
+                        'oracle': 'Read independent known fixture value',
+                        'submission': 'common_task/evaluation/fixtures/'+name+'.txt',
+                        'expected_status': 'invalid_submission' if kind == 'invalid' else 'success'}
+                if kind == 'invalid': case['expected_error_contains'] = 'invalid numeric control'
+                else: case['expected_metrics'] = {'value': float(text)}
+                cases.append(case)
+            config = {'schema_version': 'pipeline-scoring-smoke-v1', 'protocol': 'protocol.json', 'cases': cases,
+                      'weak_valid_applicability': {'applicable': True, 'reason': 'Lower known scalar'}}
+            (evaluation/'scoring_smoke.json').write_text(json.dumps(config))
+            spec = {'verification': {'score_evidence': {'service': 'evaluator', 'evaluation_protocol': {
+                'config_path': 'common_task/evaluation/protocol.json', 'config_container': '/task/evaluation/protocol.json'}}}}
+            self.assertTrue(framework_generator._scoring_smoke_binding(package, spec, evaluation))
+            self.assertEqual(spec['verification']['commands']['scientific_handoff'],
+                             spec['verification']['commands']['scientific_scoring_smoke'])
+            saved = scoring_smoke.run_smoke(evaluation/'scoring_smoke.json', Path(tmp)/'run', resource_mode='authoring')
+            self.assertEqual(saved['status'], 'pass', saved)
+            archive = evaluation/'checks/evidence/smoke'; archive.mkdir(parents=True)
+            proof = archive/'report.json'; proof.write_text(json.dumps(saved))
+            report = {'checks': [{'name': 'scientific_scoring_smoke', 'status': 'pass', 'artifacts': [{
+                'path': proof.relative_to(package).as_posix(), 'sha256': hashlib.sha256(proof.read_bytes()).hexdigest()}]}]}
+            self.assertEqual(assessment_contract.check_evidence_errors(package, spec, report), [])
+            (fixtures/'correct.txt').write_text('0.5')
+            self.assertIn('scoring smoke submission changed after test: correct',
+                          assessment_contract.check_evidence_errors(package, spec, report))
+
     def test_smoke_package_relative_paths_precede_duplicate_prefix(self):
         smoke = load_file(STAGE2_ROOT/'code/scoring_smoke.py', '_smoke_relative_roots', stage=2)
         with tempfile.TemporaryDirectory() as tmp, implementation_paths(stage=2):
@@ -26,11 +74,19 @@ class Stage2ScopeAndSourceTests(unittest.TestCase):
             (bundle/'materials_manifest.json').write_text(json.dumps({'canonical_id': 'paper', 'artifacts': [
                 {'status': 'available', 'kind': 'paper_text', 'snapshot_path': 'paper.txt', 'sha256': digest}]}))
             output = root/'source_evidence_index.json'
-            index = author.build_source_evidence_index({'source_bundle': str(bundle)}, output)
+            paths = {'source_bundle': str(bundle), 'output_dir': str(root)}
+            index = author.build_source_evidence_index(paths, output)
             self.assertTrue(index['private_authoring_only'])
             self.assertEqual(index['primary_sources'][0]['sha256'], digest)
             self.assertTrue(output.is_file())
             self.assertTrue(index['captions'])
+            self.assertEqual(json.loads(output.read_text()), index)
+            self.assertEqual(index['section_anchors'][0]['line_start'], 1)
+            self.assertEqual(index['section_anchors'][0]['heading'], 'Abstract')
+            self.assertIn('source-grounded objective', index['section_anchors'][0]['excerpt'])
+            paper.write_text('Changed material')
+            with self.assertRaisesRegex(ValueError, 'changed or unsafe primary source'):
+                author.build_source_evidence_index(paths, output)
     def test_frozen_source_title_is_blocked_in_public_docs_and_guided_methods(self):
         comparison = load_file(STAGE2_ROOT/'code/paper_comparison.py', '_source_title_boundary', stage=2)
         with tempfile.TemporaryDirectory() as tmp, implementation_paths(stage=2):

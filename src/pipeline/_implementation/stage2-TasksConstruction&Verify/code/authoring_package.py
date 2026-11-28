@@ -66,15 +66,23 @@ def build_source_evidence_index(paths: dict, output: Path) -> dict:
                  and isinstance(item.get('snapshot_path'), str)]
     primary = [item for item in available if item.get('kind') in {
         'paper', 'article', 'paper_text', 'article_text', 'article_html', 'article_xml'}]
-    heading = re.compile(r'^\\s*(?:#{1,6}\\s+)?'
+    # Bind the index to observed source bytes, never just a declared digest.
+    for item in primary:
+        relative = Path(item['snapshot_path'])
+        path = source / relative
+        if (relative.is_absolute() or '..' in relative.parts or path.is_symlink()
+                or not path.resolve().is_relative_to(source) or not path.is_file()
+                or hashlib.sha256(path.read_bytes()).hexdigest() != item.get('sha256')):
+            raise ValueError('missing, changed or unsafe primary source: ' + str(relative))
+    heading = re.compile(r'^\s*(?:#{1,6}\s+)?'
                          r'(abstract|introduction|methods?|materials|results?|experiments?|evaluation|dataset|data|metrics?)'
-                         r'\\s*:?\\s*$', re.I)
+                         r'\s*:?\s*$', re.I)
     sections = []
     for item in primary:
         path = source / item['snapshot_path']
         if path.suffix.lower() not in {'.txt', '.md', '.html', '.xml'} or not path.is_file():
             continue
-        lines = path.read_text(errors='replace').split('\\n')
+        lines = path.read_text(errors='replace').split('\n')
         for number, line in enumerate(lines, 1):
             if heading.match(line):
                 sections.append({'path': item['snapshot_path'], 'sha256': item.get('sha256'),
@@ -87,7 +95,9 @@ def build_source_evidence_index(paths: dict, output: Path) -> dict:
                                   'kind': item.get('kind')} for item in primary],
              'captions': captions(source, manifest), 'section_anchors': sections,
              'private_authoring_only': True}
-    output.write_text(json.dumps(index, ensure_ascii=False, indent=2) + '\\n')
+    if output.resolve().parent != Path(paths['output_dir']).resolve():
+        raise ValueError('source evidence index must stay at the private package root')
+    output.write_text(json.dumps(index, ensure_ascii=False, indent=2) + '\n')
     return index
 
 METADATA_FIELDS = ('task_id', 'canonical_id', 'scientific_acceptance_version',
@@ -264,6 +274,10 @@ def initialize(paths: dict) -> dict:
                 '    raise NotImplementedError("Implement the scientific metric for the declared scoring unit")\n',
                 encoding='utf-8')
         smoke = evaluation/'scoring_smoke.json'
+        calibration = evaluation/'calibration.json'
+        if not calibration.exists():
+            atomic_write_json(calibration, {'source_dir': '.', 'command': [], 'mutations': [
+                {'id': 'scientific_fault', 'fault': '', 'target': '', 'replacement': ''}]})
         if not smoke.exists():
             atomic_write_json(smoke, {'schema_version': 'pipeline-scoring-smoke-v1', 'protocol': protocol_path.name,
                                       'resource_bindings': {}, 'cases': [
