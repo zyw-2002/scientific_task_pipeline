@@ -57,8 +57,20 @@ Every `data.sources[]` entry needs `id`, `name`, `package_path` (package-relativ
 `availability`, string `identity`, `version`, `content.format`, and a real
 `schema_description`. A deferred formal input also needs `prepare.command`,
 `prepare.validate`, `prepare.access`, and positive `prepare.timeout_sec`.
-Use `common_task/environment/input/data/<name>` for public fixtures. The
-Solver sees that location as `/task/problem/data/<name>`. Source archives and
+Use `common_task/environment/input/data/<name>` for public inputs or development
+examples, with `role=input`. The Solver sees that location as
+`/task/problem/data/<name>`. Private evaluator smoke fixtures must instead use
+`role=fixture`, `origin=fixture`, `visibility=private`, `availability=bundled`,
+and a path under `common_task/evaluation/fixtures/`. Declare every fixture in
+`execution.json.data.sources`, including its identity, version and schema;
+then map the formal resource ID to its fixture ID in
+`scoring_smoke.json.resource_bindings`. The generated `protocol.json.resources`
+is rebuilt from these canonical declarations on regeneration and selected-case
+`--bind-draft` runs. Editing only that generated resource table cannot persist
+a new fixture. Regenerate before testing and retain all three control results;
+an invalid control passes only when the evaluator returns the declared
+`invalid_submission` and expected error, not an arbitrary exception.
+Source archives and
 paper/code files are build evidence with `role=support`, `visibility=build_only`,
 and must not be required Solver inputs. Do not use `/task/problem/...` as a
 `package_path`.
@@ -87,11 +99,11 @@ independent metric or reward expectations for the actual protocol metric names.
 - `instruction.md` must contain `## Environment`, `## Inputs`, `## Output`, and `## Evaluation`, with fixed paths, purpose, formats, fields, required/optional status, evaluator argv, success condition, baseline-first procedure, experiment log fields, scientific restrictions, and this run's online-search difference from the original benchmark. Use English for new prose.
 - Public package documentation is mounted at `/task/problem/README.md` and `/task/problem/data_description.md`. Reference those exact container paths in the Input section when they appear in `task_contract.json`. Do not write `data/README.md`, a host path under `/u01/`, or any private evaluator path as a Solver input.
 - Public validation may be omitted when no Solver-visible development set and runnable validation script are supplied. Never reference `/task/evaluation` or private labels from public commands.
-- Construction uses small fixtures only. Formal data, checkpoint, split, and full-scale run are Stage3 execution responsibilities. A missing key model/label/checkpoint makes status `BLOCKED`. A repairable path/evaluator issue is `REWORK`.
+- Construction uses small fixtures only. Formal data, checkpoint, split, and full-scale run are Stage3 execution responsibilities. An absent resource with a runnable, independently verifiable authorized preparation recipe remains construction-eligible and execution-pending. A required key model/label/checkpoint without such a path makes status `BLOCKED`. A repairable path/evaluator issue is `REWORK`.
 
 ## Final check
 
-Open only the final `execution.json`, generated `common_task/task_contract.json`, and `common_task/instruction.md`. Verify that the generated contract, instruction, test, and evaluator use the same paths. Run the real smoke and leave `construction_preflight.json`, `scoring_smoke.json`, and all cited paper evidence in the output. Do not claim formal data execution from a fixture.
+Open the final `execution.json`, generated `common_task/environment/input/task_contract.json`, and `common_task/instruction.md`. Verify that the generated contract, instruction, test, and evaluator use the same paths. Run the real smoke and leave `construction_preflight.json`, `scoring_smoke.json`, and all cited paper evidence in the output. Do not claim formal data execution from a fixture.
 
 
 ## Shipped tool entrypoints

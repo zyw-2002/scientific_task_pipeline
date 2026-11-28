@@ -1,6 +1,9 @@
 import hashlib
 import json
 import shutil
+import os
+import subprocess
+import sys
 from pathlib import Path
 import tempfile
 import unittest
@@ -10,6 +13,64 @@ from pipeline._legacy_loader import STAGE2_ROOT, STAGE3_ROOT, implementation_pat
 
 
 class Stage2ScopeAndSourceTests(unittest.TestCase):
+    def test_selected_smoke_uses_canonical_fixture_declarations_after_rebinding(self):
+        from pipeline.stage2_construction.contracts.resource_contract import bind_protocol_resources
+        with tempfile.TemporaryDirectory() as tmp:
+            package = Path(tmp)/'package'; evaluation = package/'common_task/evaluation'
+            fixtures = evaluation/'fixtures'; fixtures.mkdir(parents=True)
+            (fixtures/'reference.txt').write_text('2')
+            (fixtures/'submission.txt').write_text('2')
+            (evaluation/'metric_adapter.py').write_text(
+                'from pathlib import Path\n'
+                'def measure(path, context):\n'
+                '    return {"error": abs(float(Path(path).read_text()) - '
+                'float(Path(context["reference_path"]).read_text()))}\n')
+            formal = {'id': 'held_out', 'role': 'reference', 'origin': 'observation',
+                      'visibility': 'private', 'identity': 'independent measurements', 'version': '1',
+                      'availability': 'runtime_download', 'content': {'format': 'text'},
+                      'package_path': 'common_task/evaluation/formal/reference.txt'}
+            fixture = {**formal, 'id': 'small_reference', 'role': 'fixture', 'origin': 'fixture',
+                       'availability': 'bundled', 'identity': 'known scalar control',
+                       'package_path': 'common_task/evaluation/fixtures/reference.txt'}
+            spec = {'assessment_contract_version': 1, 'data': {'sources': [formal]},
+                    'submission': {'required_artifacts': [{'id': 'answer', 'description': 'Scalar prediction',
+                                   'format': 'text', 'paths': ['{submission}']}]}}
+            protocol = {'adapter': 'metric_adapter.py', 'resource_bindings': {'reference_path': 'held_out'},
+                        'units': [{'id': 'one', 'path': '{submission}'}],
+                        'aggregations': [{'output': 'mae', 'metric': 'error', 'operation': 'identity', 'unit_ids': ['one']}],
+                        'reward_metric': 'mae', 'reward_direction': 'lower_is_better'}
+            bind_protocol_resources(protocol, {**spec, 'data': {'sources': [formal, fixture]}},
+                                    'common_task/evaluation', '/task/evaluation')
+            config = evaluation/'protocol.json'; config.write_text(json.dumps(protocol))
+            smoke = evaluation/'scoring_smoke.json'
+            smoke.write_text(json.dumps({'resource_bindings': {'held_out': 'small_reference'}}))
+            (package/'execution.json').write_text(json.dumps(spec))
+            output = Path(tmp)/'result'
+            evaluator = STAGE2_ROOT.parents[1]/'stage2_construction/contracts/evaluation_protocol.py'
+            env = {**os.environ, 'PYTHONPATH': str(STAGE2_ROOT.parents[2])}
+            command = [sys.executable, str(evaluator), '--config', str(config), '--input',
+                       str(fixtures/'submission.txt'), '--output', str(output), '--resource-mode',
+                       'authoring', '--test-resources', str(smoke), '--bind-draft']
+            # A protocol-only fixture disappears from the in-memory draft binding.
+            failed = subprocess.run(command, env=env, capture_output=True, text=True, timeout=30)
+            self.assertEqual(failed.returncode, 1, failed.stderr)
+            result = json.loads((output/'result.json').read_text())
+            self.assertEqual(result['status'], 'runtime_error')
+            self.assertIn("'held_out' -> 'small_reference'", result['error'])
+            self.assertIn('execution.json.data.sources', result['error'])
+            spec['data']['sources'].append(fixture)
+            (package/'execution.json').write_text(json.dumps(spec))
+            # Repeated generation/rebinding preserves a canonically declared fixture.
+            for _ in range(2):
+                bind_protocol_resources(protocol, spec, 'common_task/evaluation', '/task/evaluation')
+                config.write_text(json.dumps(protocol))
+                passed = subprocess.run(command, env=env, capture_output=True, text=True, timeout=30)
+                self.assertEqual(passed.returncode, 0, passed.stderr)
+                result = json.loads((output/'result.json').read_text())
+                self.assertEqual(result['metrics'], {'mae': 0.0})
+                self.assertEqual(result['resource_evidence']['resources']['held_out']['resource_id'], 'small_reference')
+            self.assertFalse((evaluation/'formal/reference.txt').exists())
+
     def test_real_smoke_receipt_survives_package_relative_fixture_and_rejects_tampering(self):
         with tempfile.TemporaryDirectory() as tmp, implementation_paths(stage=2):
             load_file(STAGE3_ROOT/'code/score_attempt.py', 'score_attempt', stage=3)

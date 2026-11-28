@@ -543,7 +543,12 @@ def resolve(config, config_path, *, mode='runtime', test_bindings=None):
     if not isinstance(swaps, dict): raise ValueError('test bindings must map resource IDs to fixture IDs')
     for original, fixture in swaps.items():
         if original not in resources or resources[original]['role'] == 'fixture' or fixture not in resources or resources[fixture]['role'] != 'fixture':
-            raise ValueError('test bindings must map a formal resource to a declared fixture')
+            raise ValueError(
+                f'test binding {original!r} -> {fixture!r} must map a formal resource '
+                'to a declared fixture; declare both IDs in execution.json.data.sources '
+                '(fixture: role=fixture, origin=fixture, visibility=private, '
+                'availability=bundled, package_path under common_task/evaluation/), '
+                'then regenerate protocol.json; protocol.resources is generated')
         # A test instance may have fewer records, but retains the formal interface.
         a, b = resources[original].get('content', {}), resources[fixture].get('content', {})
         for key in ('format', 'columns', 'id_column', 'items_path', 'forbidden_keys'):

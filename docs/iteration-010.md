@@ -97,3 +97,38 @@ Review guidance now spells out exact existing status values, citation fields,
 deferred-execution semantics and final evidence-binding order. This does not
 automatically change a report verdict, synthesize a reference or loosen a
 scientific acceptance check. In-flight Iteration 009 snapshots are unchanged.
+
+## Recovery outcome and trajectory-driven follow-up
+
+At 14:47:52 Asia/Shanghai on 2026-11-28, the serial external rubric received
+HTTP 429 `insufficient_quota` on S099's first judgment. Nine selected tasks
+completed both judgments: Q0 mean 99.305556, D0 mean 63.194444. Coverage is
+9/10, S099 remains null, and the cohort did not pass. All ten Iteration 008
+construction outcomes remain blocked and T0 remains unknown. The successful
+calls demonstrate a period of service availability, not durable quota recovery.
+The supervisor stopped before any Iteration 010 worker was launched.
+
+The real S075 first construction trajectory, steps 93--121, repeatedly edits
+only `protocol.json.resources`, then loses those edits during regeneration or
+selected-case `--bind-draft`. The generator correctly rebuilds that derived
+table from `execution.json.data.sources`; retaining undeclared resources would
+break the canonical resource contract. The authoring prompt, however, called
+public examples "fixtures" despite the validator requiring private evaluator
+fixtures. Clarify canonical declarations, public development inputs versus
+private fixtures, and why both generation and selected-case smoke rebind them.
+Missing binding errors now name both IDs and the editable declaration location.
+No new gate, resource substitution or automatic scientific verdict is added.
+Also remove an inconsistent unconditional block for missing resource bytes:
+a genuine deferred preparation remains execution-pending, while an absent
+authorized preparation path still blocks. Correct the generated public
+task-contract path in the final-check instructions.
+
+A regression executes the real evaluator in a subprocess: a protocol-only
+fixture fails with an actionable canonical-declaration error; declaring it in
+the execution contract survives repeated rebinding and produces the expected
+metric without formal data bytes. All 64 tests pass.
+
+At 14:54, Iteration 009 S043 and S075 have passed host construction acceptance.
+Their original packages remain frozen. Real isolated Stage3 resource
+preparation is the next executable check; Solver execution and full T0 are
+still pending. This is not a claim that query-only scores prove run readiness.

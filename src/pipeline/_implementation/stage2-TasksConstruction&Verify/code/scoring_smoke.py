@@ -495,7 +495,10 @@ def binding_errors(package: Path, spec: dict) -> list[str]:
                 if original not in resources and fixture in resources and resources[fixture]['role'] == 'fixture':
                     continue
                 if original not in resources or resources[original]['role'] == 'fixture' or fixture not in resources or resources[fixture]['role'] != 'fixture':
-                    raise ValueError('smoke resources must bind declared formal resources to fixture resources')
+                    raise ValueError(
+                        f'smoke binding {original!r} -> {fixture!r} must map a formal resource '
+                        'to a declared fixture; add both to execution.json.data.sources '
+                        'and regenerate protocol.json instead of editing protocol.resources')
                 for key in ('format', 'columns', 'id_column', 'items_path', 'forbidden_keys'):
                     if key in resources[original]['content'] and resources[original]['content'][key] != resources[fixture]['content'].get(key):
                         raise ValueError('smoke cannot change formal resource constraint: ' + key)
