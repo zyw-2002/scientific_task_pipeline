@@ -74,3 +74,20 @@ available again. Its ten frozen source bindings are present; no easier tasks
 were substituted. The candidate includes the preceding quota classification
 and iteration-identity reporting fixes. Final combined suite: 59 tests pass.
 No full Q/D/T score, scientific improvement or main-branch promotion is claimed.
+
+Execution update, 2026-11-28: the original endpoint passed a minimal probe
+and the ten frozen tasks were launched with concurrency ten at revision
+`d93dfe2`. First-attempt traces contain actual private index calls and 6–14
+quote-helper calls. The index implementation at that revision had a JSON
+newline/regex escaping defect missed by the initial file-existence test;
+it is corrected on `iteration-010-evidence-interfaces` with JSON read-back,
+physical source-line and source-byte checks. Worker snapshots are unchanged.
+
+The terminal Iteration 008 cohort contains ten blocked construction results,
+including the resumed S099. Its resumed external Q/D review yielded no valid
+judgments because the endpoint returned HTTP 429 again. A minimal request
+confirmed `insufficient_quota` at 2026-11-28 14:20 Asia/Shanghai. At that
+checkpoint S045 was blocked and nine Iteration 009 workers were still active;
+none had construction-ready evidence. The next waiting supervisor was stopped
+before starting workers; in-flight exports remain preserved. No new grade or
+improvement is claimed.
