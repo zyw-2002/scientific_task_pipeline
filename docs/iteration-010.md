@@ -57,3 +57,18 @@ Preflight: 5 ready, 1 downloadable, 4 partial. All ten frozen primary source
 bundles are bound. This candidate is queued behind Iteration 009; it will not
 change an in-flight worker or replace a selected case. Main is not promoted
 without complete comparable Q/D/T and actual Stage3 evidence.
+
+Execution checkpoint on 2026-11-28, 14:20 Asia/Shanghai: the Iteration 008
+external Q/D requests all returned HTTP 429 and yielded zero valid judgments;
+both batch means remain null with 0/10 coverage. A single minimal request
+confirmed the exact `insufficient_quota` error again, saved as Iteration 009's
+`endpoint-diagnostic.json`. A previously successful probe did not establish
+sufficient quota for sustained workload. The waiting Iteration 010 supervisor
+was stopped before launching any worker. Existing Iteration 009 child
+processes and snapshots remain available for their own terminal export.
+Nine were still running and S045 was blocked at this checkpoint.
+
+The user explicitly authorized Stage3 Qwen Solver input/interaction egress
+on 2026-11-28 after automatic approval review requested a separate Stage3
+authorization. No Stage3 was actually launched by the waiting supervisor.
+This permission applies when the original endpoint becomes usable again.
