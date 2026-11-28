@@ -101,7 +101,7 @@ scientific acceptance check. In-flight Iteration 009 snapshots are unchanged.
 ## Recovery outcome and trajectory-driven follow-up
 
 At 14:47:52 Asia/Shanghai on 2026-11-28, the serial external rubric received
-HTTP 429 `insufficient_quota` on S099's first judgment. Nine selected tasks
+HTTP 429 `insufficient_quota` on S099's second judgment. Nine selected tasks
 completed both judgments: Q0 mean 99.305556, D0 mean 63.194444. Coverage is
 9/10, S099 remains null, and the cohort did not pass. All ten Iteration 008
 construction outcomes remain blocked and T0 remains unknown. The successful
@@ -172,3 +172,27 @@ recipes or placeholders to obtain a passing benchmark score.
 Validation after these execution-path fixes: 65 deterministic tests pass; the
 one opt-in Docker test is skipped by the default suite and passes separately
 against the immutable existing image. No external model is used by these tests.
+
+At 15:02, a single serial recovery attempt imported all 19 completed judgments
+after exact request/model hash verification and requested only S099's missing
+second judgment. It succeeded. Iteration 008 now has complete 10/10 query-only
+Q0=99.25 and D0=64.3125; full T0 remains unknown because all ten construction
+outcomes are blocked. Earlier transport failures remain archived. This does
+not establish durable endpoint quota availability.
+
+Iteration 009 finished all ten real Stage2 runs: S043, S075 and S093 passed
+host construction acceptance; the other seven are blocked. Real preparation
+with the candidate path fix was attempted on all three immutable packages.
+S043 now fails on the genuine missing dataset rather than a read-only path;
+S075 fails on absent `scripts/prepare_data.py` despite existing placeholder
+HDF5 files; S093 fails on absent private `prepare_sma_data.py`. All original
+package hashes are preserved. Receipts are retained in
+`stage3-preparation-pathfix/`; none is considered a Solver trajectory or T0.
+
+The next runner serially grades the frozen Iteration 009 while launching the
+fresh selected Iteration 010 at four constructors. Its grading stream stays
+serial and it waits for that review before grading Iteration 010. Native
+Stage3 workflows record accepted-package execution outcomes, using run-owned
+formal-resource caches. Main remains unchanged until complete comparable
+execution evidence supports promotion. No aggregate improvement is inferred
+from the different random cohorts.
