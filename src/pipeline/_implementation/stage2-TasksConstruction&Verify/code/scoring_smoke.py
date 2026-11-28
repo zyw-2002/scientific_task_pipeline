@@ -67,7 +67,6 @@ def authoring_metric_adapter(protocol_path, config):
 def _candidate_roots(root, relative):
     """Yield the config directory and an enclosing package root when present."""
     root = Path(root).resolve()
-    yield root / relative, root
     # Authoring files are package-relative in execution.json, while smoke
     # cases are documented relative to scoring_smoke.json.  Accept the former
     # when running host preflight, retaining the same containment checks.
@@ -77,6 +76,7 @@ def _candidate_roots(root, relative):
         # config directory itself.  Resolve this spelling without requiring
         # the private execution.json to be mounted there.
         yield root.joinpath(*parts[2:]), root
+    yield root / relative, root
     if parts[:1] == ('common_task',):
         for parent in (root, *root.parents):
             if (parent / 'execution.json').is_file():

@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 from pathlib import Path
 import shutil
 import tempfile
@@ -53,6 +54,41 @@ def preserve_evidence(package, evidence):
         raise ValueError('evidence archive must stay inside the editable package')
     shutil.copytree(evidence, target)
     return target
+
+
+def build_source_evidence_index(paths: dict, output: Path) -> dict:
+    """Write a private, deterministic index before scientific drafting."""
+    from paper_caption_audit import captions
+    source = Path(paths['source_bundle']).resolve()
+    manifest = json.loads((source / 'materials_manifest.json').read_text())
+    available = [item for item in manifest.get('artifacts', [])
+                 if isinstance(item, dict) and item.get('status') == 'available'
+                 and isinstance(item.get('snapshot_path'), str)]
+    primary = [item for item in available if item.get('kind') in {
+        'paper', 'article', 'paper_text', 'article_text', 'article_html', 'article_xml'}]
+    heading = re.compile(r'^\\s*(?:#{1,6}\\s+)?'
+                         r'(abstract|introduction|methods?|materials|results?|experiments?|evaluation|dataset|data|metrics?)'
+                         r'\\s*:?\\s*$', re.I)
+    sections = []
+    for item in primary:
+        path = source / item['snapshot_path']
+        if path.suffix.lower() not in {'.txt', '.md', '.html', '.xml'} or not path.is_file():
+            continue
+        lines = path.read_text(errors='replace').split('\\n')
+        for number, line in enumerate(lines, 1):
+            if heading.match(line):
+                sections.append({'path': item['snapshot_path'], 'sha256': item.get('sha256'),
+                                 'line_start': number, 'line_end': min(len(lines), number + 3),
+                                 'heading': line.strip(),
+                                 'excerpt': ' '.join(' '.join(lines[number-1:number+3]).split())[:500]})
+    index = {'schema_version': 'pipeline-source-evidence-index-v1',
+             'canonical_id': manifest.get('canonical_id'),
+             'primary_sources': [{'path': item['snapshot_path'], 'sha256': item.get('sha256'),
+                                  'kind': item.get('kind')} for item in primary],
+             'captions': captions(source, manifest), 'section_anchors': sections,
+             'private_authoring_only': True}
+    output.write_text(json.dumps(index, ensure_ascii=False, indent=2) + '\\n')
+    return index
 
 METADATA_FIELDS = ('task_id', 'canonical_id', 'scientific_acceptance_version',
                    'assessment_contract_version', 'scope_contract_version', 'difficulty_contract_version', 'paper_caption_review_version', 'paper_comparison_version', 'solver_access',
@@ -284,9 +320,15 @@ def main(argv=None):
     action.add_argument('--check-scope', action='store_true', help='Check the scientific plan against the frozen paper before implementing the scorer')
     action.add_argument('--find-quote', metavar='PHRASE', help='Find a phrase in the frozen primary paper and return exact source_evidence objects')
     action.add_argument('--quote-lines', nargs=2, type=int, metavar=('FIRST','LAST'), help='Return the exact source_evidence for the chosen inclusive lines')
+    action.add_argument('--source-index', action='store_true', help='Write a private deterministic source evidence index before drafting')
     parser.add_argument('--source-path', help='Select a primary text by its materials_manifest snapshot_path')
     args = parser.parse_args(argv)
     paths = read_paths(args.paths)
+    if args.source_index:
+        output = Path(paths['output_dir']) / 'source_evidence_index.json'
+        build_source_evidence_index(paths, output)
+        print(json.dumps({'index': str(output), 'private_authoring_only': True}, ensure_ascii=False))
+        return 0
     if args.find_quote is not None or args.quote_lines is not None:
         from paper_caption_audit import find_source_quotes
         try:

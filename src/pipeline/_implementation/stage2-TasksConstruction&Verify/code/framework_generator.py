@@ -1328,6 +1328,12 @@ def _scoring_smoke_binding(package, spec, eval_dir):
     verification.setdefault('commands', {})[binding['runtime_check']] = {
         'service': evidence['service'],
         'command': ['python', binding['runner_container'], '--config', binding['config_container']]}
+    # If the author supplied a concrete evaluator command, preserve it as the
+    # required submission-to-score handoff control as well. This repairs the
+    # framework ABI without inventing a metric or task-specific invocation.
+    commands = verification.setdefault('commands', {})
+    if 'scientific_handoff' not in commands and isinstance(commands.get('scoring'), dict):
+        commands['scientific_handoff'] = copy.deepcopy(commands['scoring'])
     return True
 
 

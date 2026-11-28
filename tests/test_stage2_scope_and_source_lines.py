@@ -9,6 +9,28 @@ from pipeline._legacy_loader import STAGE2_ROOT, implementation_paths, load_file
 
 
 class Stage2ScopeAndSourceTests(unittest.TestCase):
+    def test_smoke_package_relative_paths_precede_duplicate_prefix(self):
+        smoke = load_file(STAGE2_ROOT/'code/scoring_smoke.py', '_smoke_relative_roots', stage=2)
+        with tempfile.TemporaryDirectory() as tmp, implementation_paths(stage=2):
+            root = Path(tmp); (root/'fixtures').mkdir(); (root/'fixtures/good.json').write_text('{}')
+            self.assertEqual(smoke._file(root, 'common_task/evaluation/fixtures/good.json'),
+                             (root/'fixtures/good.json').resolve())
+
+    def test_source_index_is_private_and_hash_bound(self):
+        author = load_file(STAGE2_ROOT/'code/authoring_package.py', '_source_index', stage=2)
+        with tempfile.TemporaryDirectory() as tmp, implementation_paths(stage=2):
+            root = Path(tmp); bundle = root/'bundle'; bundle.mkdir()
+            paper = bundle/'paper.txt'; paper.write_text('Abstract\nA source-grounded objective.\nFigure 1: Caption.\n')
+            import hashlib
+            digest = hashlib.sha256(paper.read_bytes()).hexdigest()
+            (bundle/'materials_manifest.json').write_text(json.dumps({'canonical_id': 'paper', 'artifacts': [
+                {'status': 'available', 'kind': 'paper_text', 'snapshot_path': 'paper.txt', 'sha256': digest}]}))
+            output = root/'source_evidence_index.json'
+            index = author.build_source_evidence_index({'source_bundle': str(bundle)}, output)
+            self.assertTrue(index['private_authoring_only'])
+            self.assertEqual(index['primary_sources'][0]['sha256'], digest)
+            self.assertTrue(output.is_file())
+            self.assertTrue(index['captions'])
     def test_frozen_source_title_is_blocked_in_public_docs_and_guided_methods(self):
         comparison = load_file(STAGE2_ROOT/'code/paper_comparison.py', '_source_title_boundary', stage=2)
         with tempfile.TemporaryDirectory() as tmp, implementation_paths(stage=2):
