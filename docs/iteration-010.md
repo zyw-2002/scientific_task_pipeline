@@ -72,3 +72,28 @@ The user explicitly authorized Stage3 Qwen Solver input/interaction egress
 on 2026-11-28 after automatic approval review requested a separate Stage3
 authorization. No Stage3 was actually launched by the waiting supervisor.
 This permission applies when the original endpoint becomes usable again.
+
+Recovery on 2026-11-28: a minimal API call returned 200, then the original
+rubric completed both real S003 judgments (Q0=98.75/D0=71.875). A serial
+recovery scorer now imports those exact responses only after request/model
+hash validation, retains the frozen ten-task cohort and stops future requests
+on HTTP/quota errors. No quota-blocked response is treated as a low grade.
+The resumed cohort has completed two judgments each for S003, S055, S087 and
+S038 so far; its full-batch scores remain pending.
+
+The restored workflow waits for the existing Iteration 009 workers, collects
+their original final packages and runs the same serial rubric. Only native
+construction-ready packages proceed to real Stage3. The subsequent frozen
+Iteration 010 uses four constructors and one Solver at a time to reduce
+request bursts, within the user's ceiling of ten. Missing task packages stay
+unknown in the original denominator. Scientific outcomes and full T0 remain
+separate from query-only Q/D. Runtime script identities and selection hashes
+are recorded in `recovery-plan.json`; the state is in `recovery-state.json`.
+
+The first real Iteration 009 S043 independent-review export passed static
+construction but failed host acceptance on missing/stale audit references,
+incomplete public declaration transcriptions and incorrect audit vocabulary.
+Review guidance now spells out exact existing status values, citation fields,
+deferred-execution semantics and final evidence-binding order. This does not
+automatically change a report verdict, synthesize a reference or loosen a
+scientific acceptance check. In-flight Iteration 009 snapshots are unchanged.

@@ -72,3 +72,48 @@ Compatibility path for frozen role snapshots is `/task/input/fixed_task_instruct
 The initialized construction_audit is deliberately incomplete. Fill each public_documents entry with exact quoted claims, subject/field/value and rationale; retain the actual declared resource and requirement IDs. For scope_decisions fill retained_capability, removed_capability, justification, difficulty_effect and source_evidence. For data_paths verify the transcribed content, availability and preparation/validation argv against the final execution.json, then provide consistency_reason, missing_data_behavior and extent evidence. For shortcut_checks bind a real smoke case and its covered requirements, or explain non-applicability with code evidence. Do not invent evidence or mark controls pass without their archived results. After reviewing the final revision, run `python /task/input/pipeline_tools/review_bindings.py --reviewed`, then preflight. Binding refreshes identities and existing evidence; it does not confer acceptance.
 
 Check whether every explicitly mandatory scientific process in the public task is represented by an assessment requirement and an actual evidence/review path. A metric-only evaluator cannot prove a required implementation or training process. Preserve freedom of implementation and equivalent methods whenever the task permits them; optional background methodology must not become a restriction. Do not approve a required method merely because the final values look plausible.
+
+
+## Exact review report fields
+
+Use the initialized report and actual validator vocabulary. A completed review
+must contain your evidence and judgments; these strings are schema values,
+not conclusions supplied by the framework:
+
+- `scientific_checks.scope_fidelity`: `status`, a nonempty `evidence` string
+  describing source coverage/adaptations/core difficulty, all four
+  `claim_verdicts` with `status` and `rationale`, and one `main_experiments`
+  decision per actual protocol experiment. `review_bindings.py --reviewed`
+  binds the final protocol hash; it does not fill the judgments.
+- `construction_audit.public_documents[package_relative_path]`: use verdict
+  `consistent` only after checking the document. Transcribe exact public
+  `quote`, `subject` (`resource:<actual id>` or `artifact:<actual id>`),
+  `field`, and its typed `value`. Check every public formal input's `origin`
+  and each declared count/shape/member list against its contract. Keep public
+  data origins method-neutral and omit original source addresses.
+- `scope_decisions[].verdict` is `justified` only after source review; fill
+  retained/removed capability, justification and difficulty effect. The
+  package-local evidence citations need `path`, `sha256`, and a real exact
+  `quote` or nonempty `locator`. Private original-source excerpts may be
+  retained under evaluation for these citations, never in public files.
+- `data_paths[].verdict` is `consistent` only after comparing current resource
+  declarations and preparation code. `extent_check` is `content` only if the
+  declared count/shape/members actually enforces extent, or `custom_validator`
+  with citations to the actual independent validation code. Neither means
+  deferred formal bytes have already been verified.
+- `shortcut_checks[].disposition` is one of `legitimate_method`, `rejected`,
+  `bounded_score`, or `not_applicable`. The first three bind a real case ID
+  whose `requirement_ids` cover the reviewed requirements. `not_applicable`
+  needs a scientific/code rationale and has `case_id=null`; do not use it to
+  hide a missing executable control. Cite existing package files.
+- A deferred `resource_readiness` check is `phase=execution,status=not_run`
+  with nonempty `evidence` explaining what is missing and a precise
+  `completion_condition` for Stage3. A complete construction review may retain
+  this state, but may not defer failed smoke/calibration controls.
+
+After the final source/code/document repairs, regenerate framework bindings,
+rerun affected controls, inspect their archived results, finish your report,
+then run `review_bindings.py --reviewed` and the final preflight. If any task
+file changes afterward, repeat the affected review/control and binding steps;
+never mark a stale report complete. Do not declare complete while any actual
+scientific finding or required construction check remains unresolved.
