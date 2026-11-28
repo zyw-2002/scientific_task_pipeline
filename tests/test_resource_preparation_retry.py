@@ -1,5 +1,6 @@
 import unittest
 import hashlib
+import json
 import sys
 import tempfile
 from pathlib import Path
@@ -7,6 +8,54 @@ from pipeline._legacy_loader import STAGE2_ROOT, load_file, implementation_paths
 
 
 class ResourcePreparationPolicyTests(unittest.TestCase):
+    def test_bundled_formal_schema_mismatch_is_rejected_during_construction(self):
+        from pipeline.stage2_construction.contracts.resource_contract import source_errors
+        with tempfile.TemporaryDirectory() as tmp:
+            package = Path(tmp)
+            path = package/'common_task/environment/input/data/items.json'
+            path.parent.mkdir(parents=True)
+            path.write_text('{"items": [1, 2]}')
+            spec = {'scope_contract_version': 3, 'framework': {'public_dir': 'common_task/environment/input'},
+                    'data': {'sources': [{'id': 'items', 'role': 'input', 'origin': 'observation',
+                              'visibility': 'public', 'identity': 'bundled control', 'version': '1',
+                              'availability': 'bundled', 'package_path': 'common_task/environment/input/data/items.json',
+                              'content': {'format': 'json', 'items_path': ['items'], 'item_count': 3}}]}}
+            errors = source_errors(package, spec, construction_only=True)
+            self.assertTrue(any('item count differs' in error for error in errors), errors)
+
+    def test_runtime_resource_with_a_sample_is_deferred_for_stage3_materialization(self):
+        from pipeline._legacy_loader import STAGE2_ROOT, load_file
+        module = load_file(STAGE2_ROOT/'code/task_contract.py', '_resource_delivery_contract', stage=2)
+        with tempfile.TemporaryDirectory() as tmp:
+            package = Path(tmp); (package/'common_task/evaluation/fixtures').mkdir(parents=True)
+            (package/'common_task/environment/input/data').mkdir(parents=True)
+            (package/'common_task/evaluation/fixtures/sample.txt').write_text('sample')
+            # This deliberately schema-compatible placeholder must not count as
+            # the formal runtime resource just because it is already present.
+            (package/'common_task/environment/input/data/formal.txt').write_text('sample')
+            (package/'common_task/evaluation/scoring_smoke.json').write_text(
+                json.dumps({'resource_bindings': {'formal': 'sample'}}))
+            source = {'id': 'formal', 'role': 'input', 'origin': 'analytical',
+                      'visibility': 'public', 'identity': 'runtime materialized control', 'version': '1',
+                      'availability': 'runtime_download',
+                      'package_path': 'common_task/environment/input/data/formal.txt',
+                      'representative_sample': 'sample', 'content': {'format': 'text'},
+                      'prepare': {'command': [sys.executable, '{package}/common_task/evaluation/prepare.py'],
+                                  'validate': [sys.executable, '{package}/common_task/evaluation/validate.py'],
+                                  'access': 'local control', 'timeout_sec': 30}}
+            sample = {'id': 'sample', 'role': 'fixture', 'origin': 'fixture', 'visibility': 'private',
+                      'identity': 'small control sample', 'version': '1', 'availability': 'bundled',
+                      'package_path': 'common_task/evaluation/fixtures/sample.txt', 'content': {'format': 'text'}}
+            (package/'common_task/evaluation/prepare.py').write_text('from pathlib import Path\n')
+            (package/'common_task/evaluation/validate.py').write_text('from pathlib import Path\n')
+            missing, deferred = module.resource_delivery(package, {'data': {'sources': [source, sample]},
+                'runtime': {'data_dir': '/task/problem/data'},
+                'framework': {'public_dir': 'common_task/environment/input'},
+                'verification': {'scoring_smoke': {'config_path': 'common_task/evaluation/scoring_smoke.json'}}})
+            self.assertEqual(missing, [], missing)
+            self.assertEqual([row['id'] for row in deferred], ['formal'])
+            self.assertEqual(deferred[0]['sample_id'], 'sample')
+
     def test_unpinned_deferred_bytes_are_materialized_even_when_structurally_valid(self):
         from pipeline.stage2_construction.contracts.resource_contract import prepare
         with tempfile.TemporaryDirectory() as tmp:

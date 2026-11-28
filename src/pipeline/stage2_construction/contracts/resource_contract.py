@@ -108,7 +108,14 @@ def source_errors(package, spec, *, preparing=False, construction_only=False):
         if item.get('visibility') not in {'public', 'private', 'build_only', 'guided'}:
             errors.append(f'{rid}: explicit visibility is required')
         availability = item.get('availability')
-        if construction_only and not preparing and spec.get('scope_contract_version') == 3 and item.get('role') in {'input', 'reference'}:
+        # Scope v3 permits *deferred* formal bytes during construction, but a
+        # bundled formal resource is already authoritative and must be
+        # validated now.  Treating every input/reference as deferred allowed a
+        # malformed bundled JSON/HDF5 sample to pass Stage2 and fail only when
+        # Stage3 tried to bind it.
+        if (construction_only and not preparing and spec.get('scope_contract_version') == 3
+                and item.get('role') in {'input', 'reference'}
+                and availability != 'bundled'):
             deferred.add(rid)
             if p.resolve() != Path(package).resolve() / path:
                 errors.append(f'{rid}: formal resource path cannot traverse symlinks')

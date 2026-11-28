@@ -237,15 +237,17 @@ def resource_delivery(package, spec):
         if source.get('availability') == 'unavailable':
             missing.append(f"{source.get('id') or source.get('name')}: explicitly unavailable {relative}")
         elif (source.get('availability') in {'preprovided', 'runtime_download'}
-              and isinstance(source.get('prepare'), dict)
-              and any('/task/problem/data' in str(arg) for arg in source['prepare'].get('command', []))):
-            # A bundled sample documents the schema only.  The prepare recipe
-            # makes the complete problem-mount input authoritative at Stage3.
+              and isinstance(source.get('prepare'), dict)):
+            # A bundled sample documents the schema only. The prepare recipe
+            # always makes the complete formal input authoritative at Stage3,
+            # including recipes that materialize from a private package script
+            # or an operator-approved preprovided source. Never infer that a
+            # schema-compatible sample is the formal split.
             evidence = _deferred_evidence(package, source, indexed, smoke_bindings)
             if evidence:
                 deferred.append(evidence)
             else:
-                missing.append(f"{source.get('id') or source.get('name')}: invalid runtime problem-mount preparation")
+                missing.append(f"{source.get('id') or source.get('name')}: invalid runtime preparation")
         elif (source.get('availability') == 'unverified'
               and isinstance(source.get('prepare'), dict)
               and not has_bytes(package, relative)):
