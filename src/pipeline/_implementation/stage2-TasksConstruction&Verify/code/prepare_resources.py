@@ -14,7 +14,7 @@ import shutil
 import subprocess
 import uuid
 
-from contract import atomic_write_json, package_fingerprint, package_manifest, package_path, sha256_file
+from contract import atomic_write_json, package_fingerprint, package_manifest, package_path, sha256_file, package_layout
 from resource_contract import check_available, source_errors, verify_content
 
 
@@ -119,14 +119,23 @@ def prepare_package(package, output, *, image, network='none', timeout=3600,
                 shutil.copyfile(seed, target)
     for name in ('readiness.json', 'runtime_evidence.json'):
         (prepared / name).unlink(missing_ok=True)
+    # Recipes use the same documented task paths as execution. Both aliases
+    # refer only to the disposable prepared copy, never the reviewed package.
+    public = package_path(prepared, package_layout(spec)['public_dir'])
+    evaluation = prepared / 'common_task/evaluation'
+    public.mkdir(parents=True, exist_ok=True)
+    evaluation.mkdir(parents=True, exist_ok=True)
     helper = Path(__file__).with_name('resource_contract.py').resolve()
     name = 'pipeline-data-' + uuid.uuid4().hex[:12]
     command = [docker, 'run', '--rm', '--name', name, '--user', f'{os.getuid()}:{os.getgid()}',
                '--network', network, '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges',
                '--read-only', '--tmpfs', '/tmp:rw,nosuid,nodev',
                '--mount', f'type=bind,source={prepared},target=/prepared',
+               '--mount', f'type=bind,source={public},target=/task/problem',
+               '--mount', f'type=bind,source={evaluation},target=/task/evaluation',
                '--mount', f'type=bind,source={output},target=/preparation',
-               '--mount', f'type=bind,source={helper},target=/pipeline/resource_contract.py,readonly']
+               '--mount', f'type=bind,source={helper},target=/pipeline/resource_contract.py,readonly',
+               '--env', 'DATA_DIR=/task/problem/data']
     for alias, source, target in mounts:
         command.extend(['--mount', f'type=bind,source={source},target={target},readonly'])
     if transport is not None:
@@ -137,6 +146,8 @@ def prepare_package(package, output, *, image, network='none', timeout=3600,
                '--receipt', '/preparation/resources.json'])
     receipt = {'status': 'fail', 'source_package_sha256': package_fingerprint(package),
                'image': image, 'network': network, 'package': str(prepared),
+               'preparation_paths': {'package': '/prepared', 'public': '/task/problem',
+                                     'private_evaluation': '/task/evaluation', 'DATA_DIR': '/task/problem/data'},
                'network_transport': transport.report if transport is not None else None,
                'shared_mounts': [{'name': alias, 'path': str(target), 'read_only': True} for alias, _, target in mounts]}
     try:

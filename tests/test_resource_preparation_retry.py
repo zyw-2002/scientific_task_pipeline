@@ -1,10 +1,39 @@
 import unittest
+import hashlib
+import sys
 import tempfile
 from pathlib import Path
 from pipeline._legacy_loader import STAGE2_ROOT, load_file, implementation_paths
 
 
 class ResourcePreparationPolicyTests(unittest.TestCase):
+    def test_unpinned_deferred_bytes_are_materialized_even_when_structurally_valid(self):
+        from pipeline.stage2_construction.contracts.resource_contract import prepare
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp); value = root/'common_task/environment/input/data/value.txt'
+            value.parent.mkdir(parents=True); value.write_text('placeholder')
+            item = {'id': 'measurements', 'role': 'input', 'origin': 'analytical',
+                    'visibility': 'public', 'availability': 'runtime_download',
+                    'identity': 'independent arithmetic control', 'version': '1',
+                    'package_path': value.relative_to(root).as_posix(), 'content': {'format': 'text'},
+                    'prepare': {'command': [sys.executable, '-c',
+                                'from pathlib import Path; Path("{output}").write_text(str(2+2))'],
+                                'validate': [sys.executable, '-c',
+                                'from pathlib import Path; assert Path("{output}").is_file()'],
+                                'timeout_sec': 30, 'access': 'Local analytical infrastructure control'}}
+            spec = {'data': {'sources': [item]}}
+            proof = prepare(root, spec)
+            self.assertEqual(value.read_text(), '4')
+            self.assertEqual(proof[0]['sha256'], hashlib.sha256(b'4').hexdigest())
+            # A pinned, matching resource can be reused without reacquisition.
+            item['sha256'] = hashlib.sha256(b'4').hexdigest()
+            item['prepare']['command'] = [sys.executable, '-c', 'raise SystemExit(9)']
+            prepare(root, spec)
+            # An unpinned schema-compatible cache never hides a broken recipe.
+            item.pop('sha256')
+            with self.assertRaisesRegex(Exception, 'returned non-zero exit status'):
+                prepare(root, spec)
+
     def test_timed_out_worker_can_only_salvage_a_unique_safe_partial_package(self):
         with implementation_paths(stage=2):
             from worker_runtime import AuthoringWorkerError

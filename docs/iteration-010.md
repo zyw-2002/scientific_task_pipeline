@@ -132,3 +132,43 @@ At 14:54, Iteration 009 S043 and S075 have passed host construction acceptance.
 Their original packages remain frozen. Real isolated Stage3 resource
 preparation is the next executable check; Solver execution and full T0 are
 still pending. This is not a claim that query-only scores prove run readiness.
+
+Real Stage3 preparation was then executed for both original accepted packages
+in the existing immutable image, in isolated run-owned copies. Both failed:
+S043 used `/task/problem/data` while the preparation container exposed only
+`/prepared`, causing a read-only-filesystem error; S075 used an unset DATA_DIR
+and called an absent `scripts/prepare_data.py`. The receipts and actual Docker
+logs are retained under Iteration 009 `stage3-preparation/{S043,S075}`.
+
+Fix the general preparation interface by exposing the disposable public and
+private directories at `/task/problem` and `/task/evaluation`, setting
+`DATA_DIR=/task/problem/data`, and recording these paths in the receipt. The
+reviewed source stays immutable and read-only container restrictions remain.
+An opt-in real Docker test in the existing image successfully materialized
+and verified public and private arithmetic controls using those interfaces,
+and confirmed that no original package resource was changed. These are
+infrastructure controls, not benchmark data or benchmark scores.
+
+The original S075 construction trace step 31 explicitly created placeholder
+train/validation/test HDF5 files. Their unchanged descendants remain in the
+accepted package despite their deferred status. Structure-only HDF5 validators
+could therefore mistake them for formal data after the path repair. For every
+unbundled resource without a pinned file/tree digest, preparation must execute
+the declared acquisition command before validation even when bytes already
+satisfy the schema. Verified pinned bytes remain reusable. The formal-data
+cache namespace is advanced so previous receipts cannot bypass this change.
+A real subprocess regression verifies replacement of a schema-compatible
+placeholder, reuse of matching pinned bytes, and rejection when an unpinned
+acquisition command fails. Actual source authentication and scientific extent
+still require the task's independent validator; executing an arbitrary command
+does not by itself certify scientific identity.
+
+Prompts now require included preparation scripts, real retrieval/transformation
+logic or an explicit preprovided source, and independent identity/schema/split
+validation. Full downloads and computation remain Stage3 responsibilities.
+The original packages are preserved; this candidate does not rewrite their
+recipes or placeholders to obtain a passing benchmark score.
+
+Validation after these execution-path fixes: 65 deterministic tests pass; the
+one opt-in Docker test is skipped by the default suite and passes separately
+against the immutable existing image. No external model is used by these tests.

@@ -653,7 +653,10 @@ def prepare(package, spec, selected=None):
                 subprocess.run(command, cwd=package, check=True, timeout=recipe['timeout_sec'])
             if item['availability'] == 'bundled':
                 execute('validate')
-            elif recipe.get('shared_mount') and not (item.get('sha256') or item.get('files_sha256')):
+            elif not (item.get('sha256') or item.get('files_sha256')):
+                # Structural validation does not authenticate deferred bytes.
+                # A construction fixture may satisfy the schema; materialize
+                # from the declared source before validating an unpinned input.
                 execute('command')
                 execute('validate')
             else:

@@ -12,13 +12,14 @@ Repair in this order: (1) fix `execution.json` resource, requirement and experim
 
 ## Mandatory gates
 
-Scan all Solver-visible Markdown/JSON/YAML/TOML files for source-locator and
-answer leakage. Reject DOI/article URLs, recognizable paper citations,
-PRJ/ERR/SRR/GEO accessions, GitHub URLs or commit hashes, private paths, and
-original success claims such as “fully recovered”. Preserve such evidence only
-in the private review report; public preparation instructions must use an
-authorized, independently validated procedure without revealing the source
-address or reference answer.
+Before accepting the package, scan every Solver-visible Markdown/JSON/YAML/TOML
+file for source locators and answer leakage. Reject DOI/article URLs,
+paper-identifying author/title/journal/year combinations, PRJ/ERR/SRR/GEO
+accessions, GitHub URLs and commit hashes, private source-bundle paths, and
+original success claims such as “fully recovered”. Such evidence belongs in
+the private review report only. A public runtime preparation recipe may state
+how to obtain and validate an authorized resource without exposing the
+original source address or reference answer.
 
 The review must explicitly assess the six Q0 task-quality dimensions:
 objective/constraints, scope/workload, solvability information, evaluability,
@@ -48,6 +49,18 @@ were verified. Missing authorization, identity/schema, runnable preparation or
 independent validation is still a construction blocker. Never override an
 unresolved scientific finding to make a report complete.
 
+
+Preparation review must inspect each referenced script in the delivered package,
+not infer executability from an argv string. Stage3 runs from `/prepared`, with
+the disposable public inputs at `/task/problem`, private evaluator at
+`/task/evaluation`, and `DATA_DIR=/task/problem/data`. Runtime downloads need
+actual retrieval/transformation code and independent identity/schema/split
+validation; preprovided resources need an explicit source or operator-approved
+mount. A check that merely asserts a missing destination exists is not a
+download. Full data preparation is execution-pending, not a Stage2 full-scale
+run requirement. Keep acquisition locators private. Every smoke fixture must
+be declared in `execution.json.data.sources`; `protocol.json.resources` is
+derived from it, including on selected-case `--bind-draft` runs.
 
 ## Shipped tool entrypoints
 

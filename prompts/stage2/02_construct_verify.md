@@ -33,7 +33,7 @@ keep the package in REWORK or BLOCKED.
 - Instruction, README, data description, contract, Compose, `test.sh`, verifier, and evaluator agree on paths and filenames. Every declared output is checked by the verifier. Every verifier-read output is declared. Public documents never reference private `/task/evaluation` or hidden labels.
 - Formal resources are bound to real paper experiments and are either delivered with nonempty validated bytes or explicitly deferred with identity, version, schema, split, preparation command, and Stage3 runtime validation. Empty/placeholder HDF5/H5AD/ZIP files and invented model/checkpoint paths are failures.
 - Check the evaluator ABI exactly. `units[]` uses `id` and `path`, direct single-file submissions use `{submission}`, and `aggregations[]` uses `output`, `operation`, `metric`, and `unit_ids`. `reward_metric` must name an aggregation output. Treat aliases such as `unit_id`, `aggregation_id`, and `method` as repairable schema errors only when the mapping is unambiguous.
-- The task covers the paper's complete main experiments when `scope_policy=full`. A source-backed subset may use `scope_policy=bounded` with explicit task scope, adaptations, difficulty impact, and source evidence. Each declared experiment has statement, population, split, deliverable, metric unit, aggregation, formal resource IDs, quality requirement IDs, and source evidence. Every paper figure/table has a `covered`, `duplicate`, `schematic`, or `outside_scope` decision with caption evidence.
+- The task covers the paper's complete main experiments when `assessment.scope.scope_policy=full`. A bounded task may select a source-backed subset when `scope_policy=bounded`; verify its task scope, adaptations, difficulty impact, and source evidence instead of requiring an interactive full-panel decision. Each declared experiment has statement, population, split, deliverable, metric unit, aggregation, formal resource IDs, quality requirement IDs, and source evidence. Every paper figure/table has a `covered`, `duplicate`, `schematic`, or `outside_scope` decision with caption evidence.
 - Check `assessment.scope.difficulty_profile` and record its computed distance and scope policy in `review_report.json`. Enforce the 20% overall gap and one-level split-drop limits, reject undocumented scope reductions, preserve independent evaluator reference data, and preserve any required model/checkpoint. A self-reported score or rule-only replacement is a failed alignment check.
 - The evaluator performs a scientific metric calculation using independent reference/analytical/objective data. JSON shape or constant checks alone fail. Smoke must distinguish correct and weak-valid submissions, reject invalid/empty submissions, and test fixed denominators, missing units, equivalent packaging, and the principal calibration control.
 - Solver access is declared. This run permits online scientific search, and the public instruction records the difference from the original offline benchmark. Stage 01 uses fixtures only. Full data/checkpoint acquisition and actual split/file reads are Stage3 execution responsibilities.
@@ -49,6 +49,18 @@ were verified. Missing authorization, identity/schema, runnable preparation or
 independent validation is still a construction blocker. Never override an
 unresolved scientific finding to make a report complete.
 
+
+Preparation review must inspect each referenced script in the delivered package,
+not infer executability from an argv string. Stage3 runs from `/prepared`, with
+the disposable public inputs at `/task/problem`, private evaluator at
+`/task/evaluation`, and `DATA_DIR=/task/problem/data`. Runtime downloads need
+actual retrieval/transformation code and independent identity/schema/split
+validation; preprovided resources need an explicit source or operator-approved
+mount. A check that merely asserts a missing destination exists is not a
+download. Full data preparation is execution-pending, not a Stage2 full-scale
+run requirement. Keep acquisition locators private. Every smoke fixture must
+be declared in `execution.json.data.sources`; `protocol.json.resources` is
+derived from it, including on selected-case `--bind-draft` runs.
 
 ## Shipped tool entrypoints
 

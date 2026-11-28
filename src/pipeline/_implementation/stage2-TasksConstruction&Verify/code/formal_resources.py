@@ -58,7 +58,7 @@ def preparation(source, spec, receipt, image, reference_overlay=None, *, solver_
         raise ValueError('bind the task image to prepare its reviewed formal resources')
     source_hash = package_fingerprint(source)
     overlay_hash = package_fingerprint(reference_overlay) if reference_overlay is not None else ''
-    cache_key = hashlib.sha256(('validated-formal-data-v1\n' + source_hash + '\n' + image + '\n' + overlay_hash).encode()).hexdigest()
+    cache_key = hashlib.sha256(('validated-formal-data-v2-source-materialization\n' + source_hash + '\n' + image + '\n' + overlay_hash).encode()).hexdigest()
     cache_home = Path(os.environ.get('XDG_CACHE_HOME', Path.home()/'.cache')) / 'pipline' / 'formal-resources'
     cache = Path(os.environ.get('PIPELINE_RESOURCE_CACHE_DIR', cache_home)) / cache_key
     if cache.resolve().is_relative_to(source.resolve()):
